@@ -17,16 +17,16 @@ const menuSections = [
   {
     items: [
       { icon: 'cart-outline', label: 'Cart', route: '/(tabs)/cart' },
-      { icon: 'heart-outline', label: 'Favourite', route: '/(tabs)/search' },
-      { icon: 'notifications-outline', label: 'Notifications', route: null },
-      { icon: 'card-outline', label: 'Payment Method', route: null },
+      { icon: 'heart-outline', label: 'Favourite', route: '/profile/favourites' },
+      { icon: 'notifications-outline', label: 'Notifications', route: '/profile/notifications' },
+      { icon: 'card-outline', label: 'Payment Method', route: '/profile/payment-methods' },
     ],
   },
   {
     items: [
-      { icon: 'help-circle-outline', label: 'FAQs', route: null },
-      { icon: 'star-outline', label: 'User Reviews', route: null },
-      { icon: 'settings-outline', label: 'Settings', route: null },
+      { icon: 'help-circle-outline', label: 'FAQs', route: '/profile/faqs' },
+      { icon: 'star-outline', label: 'User Reviews', route: '/profile/reviews' },
+      { icon: 'settings-outline', label: 'Settings', route: '/profile/settings' },
     ],
   },
   {

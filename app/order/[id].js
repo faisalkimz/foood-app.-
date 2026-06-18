@@ -1,4 +1,4 @@
-import { View, StyleSheet, Pressable, Image, Linking, Alert } from 'react-native';
+import { View, StyleSheet, Pressable, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -103,20 +103,11 @@ export default function TrackOrderScreen() {
   const c = useTheme();
 
   const handleCall = () => {
-    Linking.openURL(`tel:${DRIVER_PHONE}`).catch(() => {
-      Alert.alert('Cannot call', 'Phone calls are not available on this device.');
-    });
+    router.push('/order/call');
   };
 
   const handleMessage = () => {
     router.push('/order/chat');
-  };
-
-  const handleWhatsApp = () => {
-    const whatsappUrl = `whatsapp://send?phone=${DRIVER_PHONE.replace('+', '')}&text=Hi ${DRIVER_NAME}, how far are you with my order?`;
-    Linking.openURL(whatsappUrl).catch(() => {
-      Alert.alert('WhatsApp not available', 'WhatsApp is not installed on this device.');
-    });
   };
 
   // Go back to home — clear the stack to avoid stacking
@@ -210,12 +201,6 @@ export default function TrackOrderScreen() {
               onPress={handleMessage}
             >
               <Ionicons name="chatbubble" size={18} color={c.primary} />
-            </Pressable>
-            <Pressable
-              style={[styles.actionBtn, { backgroundColor: '#25D366', borderColor: '#25D366' }]}
-              onPress={handleWhatsApp}
-            >
-              <Ionicons name="logo-whatsapp" size={18} color="#FFF" />
             </Pressable>
           </View>
         </View>

@@ -33,8 +33,15 @@ function AppStack() {
         />
         <Stack.Screen name="order/[id]" />
         <Stack.Screen name="order/chat" />
+        <Stack.Screen name="order/call" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
         <Stack.Screen name="profile/edit" />
         <Stack.Screen name="profile/address" />
+        <Stack.Screen name="profile/notifications" />
+        <Stack.Screen name="profile/favourites" />
+        <Stack.Screen name="profile/payment-methods" />
+        <Stack.Screen name="profile/faqs" />
+        <Stack.Screen name="profile/reviews" />
+        <Stack.Screen name="profile/settings" />
       </Stack>
     </>
   );

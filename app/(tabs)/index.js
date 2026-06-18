@@ -59,6 +59,43 @@ export default function HomeScreen() {
         <SearchBar onPress={() => router.push('/(tabs)/search')} />
       </View>
 
+      {/* Offers / Promotions */}
+      <View style={[styles.section, { paddingHorizontal: 0 }]}>
+        <View style={[styles.sectionHeader, { paddingHorizontal: spacing.xl }]}>
+          <Text variant="h3" style={{ color: c.text }}>Special Offers</Text>
+          <Pressable hitSlop={8}>
+            <Text variant="bodySmall" style={{ color: c.primary }}>See All &gt;</Text>
+          </Pressable>
+        </View>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.md }}
+          data={[
+            { id: '1', discount: '30%', title: 'All Burgers', code: 'BURGER30', color: '#FF6B35', bg: '#FFF0EB' },
+            { id: '2', discount: '25%', title: 'First Order', code: 'WELCOME25', color: '#7C3AED', bg: '#EDE9FE' },
+            { id: '3', discount: '15%', title: 'Free Delivery', code: 'FREEDEL', color: '#2ECC71', bg: '#DCFCE7' },
+          ]}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <Pressable style={[styles.offerCard, { backgroundColor: c.backgroundSecondary }]}>
+              <View style={[styles.offerBadge, { backgroundColor: item.color }]}>
+                <Text variant="h2" style={styles.offerDiscount}>{item.discount}</Text>
+                <Text variant="caption" style={styles.offerOff}>OFF</Text>
+              </View>
+              <View style={styles.offerInfo}>
+                <Text variant="body" style={[styles.offerTitle, { color: c.text }]}>{item.title}</Text>
+                <View style={[styles.offerCodeWrap, { backgroundColor: item.bg }]}>
+                  <Text variant="caption" style={[styles.offerCode, { color: item.color }]}>
+                    {item.code}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+          )}
+        />
+      </View>
+
       {/* Categories */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -153,4 +190,19 @@ const styles = StyleSheet.create({
   emptyCategory: {
     alignItems: 'center', justifyContent: 'center', paddingVertical: spacing['3xl'], gap: spacing.md,
   },
+  offerCard: {
+    width: 260, borderRadius: radius.lg, flexDirection: 'row', overflow: 'hidden',
+  },
+  offerBadge: {
+    width: 80, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.lg,
+  },
+  offerDiscount: { color: '#FFF', fontWeight: '800', fontSize: 24 },
+  offerOff: { color: 'rgba(255,255,255,0.8)', fontWeight: '700', fontSize: 11 },
+  offerInfo: { flex: 1, padding: spacing.md, justifyContent: 'center', gap: spacing.sm },
+  offerTitle: { fontWeight: '700', fontSize: 16 },
+  offerCodeWrap: {
+    alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+  },
+  offerCode: { fontWeight: '800', fontSize: 11, letterSpacing: 0.5 },
 });
