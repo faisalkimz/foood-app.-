@@ -1,135 +1,163 @@
-import { View, StyleSheet, Pressable, Switch, Image } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView, Image, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Header } from '../../src/components/shared';
-import { Text, Button, Card } from '../../src/components/ui';
+import { Text } from '../../src/components/ui';
 import { useAuthStore, useThemeStore } from '../../src/store';
-import { colors, spacing, radius } from '../../src/theme';
+import { useTheme } from '../../src/providers/ThemeProvider';
+import { spacing, radius } from '../../src/theme';
 
-const menuItems = [
-  { icon: 'person-outline', label: 'Personal Info', route: null },
-  { icon: 'location-outline', label: 'Addresses', route: null },
-  { icon: 'card-outline', label: 'Payment Methods', route: null },
-  { icon: 'heart-outline', label: 'Favorites', route: null },
-  { icon: 'help-circle-outline', label: 'Help & Support', route: null },
-  { icon: 'settings-outline', label: 'Settings', route: null },
+const menuSections = [
+  {
+    items: [
+      { icon: 'person-outline', label: 'Personal Info', route: '/profile/edit' },
+      { icon: 'location-outline', label: 'Addresses', route: '/profile/address' },
+    ],
+  },
+  {
+    items: [
+      { icon: 'cart-outline', label: 'Cart', route: '/(tabs)/cart' },
+      { icon: 'heart-outline', label: 'Favourite', route: '/(tabs)/search' },
+      { icon: 'notifications-outline', label: 'Notifications', route: null },
+      { icon: 'card-outline', label: 'Payment Method', route: null },
+    ],
+  },
+  {
+    items: [
+      { icon: 'help-circle-outline', label: 'FAQs', route: null },
+      { icon: 'star-outline', label: 'User Reviews', route: null },
+      { icon: 'settings-outline', label: 'Settings', route: null },
+    ],
+  },
+  {
+    items: [
+      { icon: 'log-out-outline', label: 'Log Out', route: 'logout', isDestructive: true },
+    ],
+  },
 ];
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
-  const { isDark, toggle: toggleTheme } = useThemeStore();
+  const insets = useSafeAreaInsets();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const isDark = useThemeStore((s) => s.isDark);
+  const toggleTheme = useThemeStore((s) => s.toggle);
+  const c = useTheme();
 
-  const handleLogout = () => {
-    logout();
-    router.replace('/(auth)/login');
+  const handleMenuPress = (item) => {
+    if (item.route === 'logout') {
+      logout();
+      router.replace('/(auth)/login');
+    } else if (item.route) {
+      router.push(item.route);
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <Header title="Profile" />
-      <View style={styles.content}>
-        {/* Profile card */}
-        <Card style={styles.profileCard}>
-          <View style={styles.avatarWrap}>
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' }}
-              style={styles.avatar}
-            />
-          </View>
-          <Text variant="h3">{user?.name || 'Guest User'}</Text>
-          <Text variant="bodySmall">{user?.email || 'guest@foodorder.com'}</Text>
-        </Card>
+    <ScrollView
+      style={[styles.container, { backgroundColor: c.background }]}
+      contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xl }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <Text variant="h3" style={{ color: c.text }}>Profile</Text>
+        <Pressable hitSlop={8}>
+          <Ionicons name="ellipsis-horizontal" size={22} color={c.text} />
+        </Pressable>
+      </View>
 
-        {/* Dark mode toggle */}
-        <View style={styles.themeRow}>
-          <View style={styles.themeLeft}>
-            <Ionicons name={isDark ? 'moon' : 'sunny'} size={22} color={colors.primary} />
-            <Text variant="body" style={styles.themeLabel}>Dark Mode</Text>
-          </View>
-          <Switch
-            value={isDark}
-            onValueChange={toggleTheme}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={colors.background}
-          />
+      {/* Avatar + name */}
+      <View style={styles.avatarSection}>
+        <Image
+          source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200' }}
+          style={[styles.avatar, { borderColor: c.primary }]}
+        />
+        <Text variant="h2" style={[styles.userName, { color: c.text }]}>
+          {user?.name || 'Vishal Khadok'}
+        </Text>
+        <Text variant="bodySmall" style={{ color: c.textMuted }}>
+          {user?.email || 'I love fast food'}
+        </Text>
+      </View>
+
+      {/* Dark mode toggle */}
+      <View style={[styles.darkModeRow, { backgroundColor: c.backgroundSecondary }]}>
+        <View style={styles.darkModeLeft}>
+          <Ionicons name={isDark ? 'moon' : 'sunny'} size={20} color={c.primary} />
+          <Text variant="body" style={{ color: c.text, fontWeight: '600' }}>
+            {isDark ? 'Dark Mode' : 'Light Mode'}
+          </Text>
         </View>
+        <Switch
+          value={isDark}
+          onValueChange={toggleTheme}
+          trackColor={{ false: '#E0E0E0', true: c.primary }}
+          thumbColor="#FFF"
+        />
+      </View>
 
-        {/* Menu items */}
-        <View style={styles.menu}>
-          {menuItems.map((item) => (
-            <Pressable key={item.label} style={styles.menuItem}>
-              <Ionicons name={item.icon} size={22} color={colors.textSecondary} />
-              <Text variant="body" style={styles.menuLabel}>{item.label}</Text>
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      {/* Menu sections */}
+      {menuSections.map((section, sIdx) => (
+        <View key={sIdx} style={[styles.menuSection, { backgroundColor: c.backgroundSecondary }]}>
+          {section.items.map((item, idx) => (
+            <Pressable
+              key={item.label}
+              style={[
+                styles.menuItem,
+                idx < section.items.length - 1 && [styles.menuItemBorder, { borderBottomColor: c.borderLight }],
+              ]}
+              onPress={() => handleMenuPress(item)}
+            >
+              <View style={styles.menuItemLeft}>
+                <Ionicons
+                  name={item.icon}
+                  size={20}
+                  color={item.isDestructive ? '#E74C3C' : c.primary}
+                />
+                <Text variant="body" style={[
+                  styles.menuItemLabel,
+                  { color: item.isDestructive ? '#E74C3C' : c.text },
+                ]}>
+                  {item.label}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={c.textMuted} />
             </Pressable>
           ))}
         </View>
-
-        <Button title="Log Out" variant="outline" onPress={handleLogout} style={styles.logout} />
-      </View>
-    </View>
+      ))}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
+  container: { flex: 1 },
+  header: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
   },
-  content: {
-    padding: spacing.base,
-    gap: spacing.lg,
-  },
-  profileCard: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xl,
-  },
-  avatarWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    overflow: 'hidden',
-    borderWidth: 3,
-    borderColor: colors.primary,
-    marginBottom: spacing.sm,
-  },
+  avatarSection: { alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.sm },
   avatar: {
-    width: '100%',
-    height: '100%',
+    width: 90, height: 90, borderRadius: 45, borderWidth: 3, marginBottom: spacing.sm,
   },
-  themeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.base,
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: radius.md,
+  userName: { fontWeight: '700', fontSize: 22 },
+  darkModeRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginHorizontal: spacing.xl, paddingHorizontal: spacing.base, paddingVertical: spacing.md,
+    borderRadius: radius.lg, marginBottom: spacing.lg,
   },
-  themeLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  themeLabel: {
-    fontWeight: '500',
-  },
-  menu: {
-    gap: spacing.xs,
+  darkModeLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  menuSection: {
+    marginHorizontal: spacing.xl, borderRadius: radius.lg, marginBottom: spacing.md,
+    overflow: 'hidden',
   },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    gap: spacing.md,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: spacing.base, paddingHorizontal: spacing.base,
   },
-  menuLabel: {
-    flex: 1,
-  },
-  logout: {
-    marginTop: spacing.base,
-  },
+  menuItemBorder: { borderBottomWidth: 1 },
+  menuItemLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  menuItemLabel: { fontWeight: '500', fontSize: 15 },
 });

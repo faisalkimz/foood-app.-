@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
 import { useCartStore } from '../../src/store';
+import { useTheme } from '../../src/providers/ThemeProvider';
 import { colors, spacing, radius } from '../../src/theme';
 
 const PAYMENT_METHODS = [
@@ -37,6 +38,7 @@ export default function PaymentScreen() {
   const insets = useSafeAreaInsets();
   const getSubtotal = useCartStore((s) => s.getSubtotal);
   const clearCart = useCartStore((s) => s.clearCart);
+  const c = useTheme();
 
   const [selected, setSelected] = useState('cash');
   const [showAddCard, setShowAddCard] = useState(false);
@@ -75,7 +77,7 @@ export default function PaymentScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: c.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>

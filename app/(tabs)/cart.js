@@ -5,16 +5,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../src/components/shared';
 import { Text, Button } from '../../src/components/ui';
 import { useCartStore } from '../../src/store';
+import { useTheme } from '../../src/providers/ThemeProvider';
 import { colors, spacing, radius } from '../../src/theme';
 
 export default function CartScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { items, removeItem, updateQuantity, getSubtotal, clearCart } = useCartStore();
+  const c = useTheme();
 
   if (items.length === 0) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: c.background }]}>
         <Header title="My Cart" />
         <View style={styles.emptyState}>
           <Ionicons name="cart-outline" size={64} color={colors.textMuted} />
@@ -33,7 +35,7 @@ export default function CartScreen() {
   const grandTotal = total + deliveryFee;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: c.background }]}>
       <Header title="My Cart" />
       <FlatList
         data={items}

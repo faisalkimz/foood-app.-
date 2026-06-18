@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
 import { menuItems } from '../../src/services/mock/data';
 import { useCartStore } from '../../src/store';
+import { useTheme } from '../../src/providers/ThemeProvider';
 import { colors, spacing, radius } from '../../src/theme';
 
 const sizes = [
@@ -19,6 +20,7 @@ export default function FoodDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const addItem = useCartStore((s) => s.addItem);
+  const c = useTheme();
 
   const allItems = Object.values(menuItems).flat();
   const item = allItems.find((i) => i.id === id);
@@ -29,7 +31,7 @@ export default function FoodDetailScreen() {
 
   if (!item) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: c.background }]}>
         <View style={[styles.headerBar, { paddingTop: insets.top + spacing.sm }]}>
           <Pressable onPress={() => router.back()} style={styles.iconBtn}>
             <Ionicons name="arrow-back" size={22} color={colors.text} />
@@ -80,7 +82,7 @@ export default function FoodDetailScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: c.background }]}>
       {/* Header */}
       <View style={[styles.headerBar, { paddingTop: insets.top + spacing.sm }]}>
         <Pressable onPress={() => router.back()} style={styles.iconBtn}>

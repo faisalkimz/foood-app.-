@@ -4,11 +4,13 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
+import { useTheme } from '../../src/providers/ThemeProvider';
 import { colors, spacing, radius } from '../../src/theme';
 
 export default function CongratulationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const c = useTheme();
 
   // Animated values for entrance
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -41,7 +43,7 @@ export default function CongratulationsScreen() {
   }, []);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.xl }]}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.xl, backgroundColor: c.background }]}>
       {/* Success content */}
       <View style={styles.center}>
         {/* Animated checkmark */}

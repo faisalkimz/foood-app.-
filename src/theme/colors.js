@@ -56,7 +56,7 @@ export const darkColors = {
   text: '#F5F5F5',
   textSecondary: '#A0A0B8',
   textMuted: '#6B6B80',
-  textInverse: '#1A1A2E',
+  textInverse: '#FFFFFF',
 
   border: '#3A3A55',
   borderLight: '#2A2A45',

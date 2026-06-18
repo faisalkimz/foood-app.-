@@ -1,25 +1,7 @@
 import { Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import Text from './Text';
-import { colors, spacing, radius } from '../../theme';
-
-const variants = {
-  primary: {
-    button: { backgroundColor: colors.primary },
-    text: { color: colors.textInverse },
-  },
-  secondary: {
-    button: { backgroundColor: colors.primaryLight },
-    text: { color: colors.primary },
-  },
-  outline: {
-    button: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
-    text: { color: colors.text },
-  },
-  ghost: {
-    button: { backgroundColor: 'transparent' },
-    text: { color: colors.primary },
-  },
-};
+import { useTheme } from '../../providers/ThemeProvider';
+import { spacing, radius } from '../../theme';
 
 const sizes = {
   sm: { button: { paddingVertical: spacing.sm, paddingHorizontal: spacing.base }, text: 'bodySmall' },
@@ -28,28 +10,27 @@ const sizes = {
 };
 
 export default function Button({
-  title,
-  onPress,
-  variant = 'primary',
-  size = 'md',
-  disabled = false,
-  loading = false,
-  style,
+  title, onPress, variant = 'primary', size = 'md', disabled = false, loading = false, style,
 }) {
-  const v = variants[variant];
+  const c = useTheme();
   const s = sizes[size];
+
+  const variantStyles = {
+    primary: { button: { backgroundColor: c.primary }, text: { color: '#FFF' } },
+    secondary: { button: { backgroundColor: c.primaryLight }, text: { color: c.primary } },
+    outline: { button: { backgroundColor: 'transparent', borderWidth: 1, borderColor: c.border }, text: { color: c.text } },
+    ghost: { button: { backgroundColor: 'transparent' }, text: { color: c.primary } },
+  };
+
+  const v = variantStyles[variant];
 
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
-        styles.base,
-        v.button,
-        s.button,
-        pressed && styles.pressed,
-        disabled && styles.disabled,
-        style,
+        styles.base, v.button, s.button,
+        pressed && styles.pressed, disabled && styles.disabled, style,
       ]}
     >
       {loading ? (
@@ -62,19 +43,8 @@ export default function Button({
 }
 
 const styles = StyleSheet.create({
-  base: {
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  label: {
-    fontWeight: '600',
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
+  base: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
+  label: { fontWeight: '600' },
+  pressed: { opacity: 0.85 },
+  disabled: { opacity: 0.5 },
 });

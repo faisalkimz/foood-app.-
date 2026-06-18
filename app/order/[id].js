@@ -1,11 +1,11 @@
-import { useRef } from 'react';
-import { View, StyleSheet, Pressable, Image, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Image, Linking, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { Text } from '../../src/components/ui';
-import { colors, spacing, radius } from '../../src/theme';
+import { useTheme } from '../../src/providers/ThemeProvider';
+import { spacing, radius } from '../../src/theme';
 
 // Kampala, Uganda coordinates
 const RESTAURANT_LAT = 0.3163;
@@ -14,6 +14,9 @@ const CUSTOMER_LAT = 0.3350;
 const CUSTOMER_LNG = 32.5729;
 const DRIVER_LAT = 0.3260;
 const DRIVER_LNG = 32.5770;
+
+const DRIVER_PHONE = '+256700123456';
+const DRIVER_NAME = 'Robert Fox';
 
 const mapHtml = `
 <!DOCTYPE html>
@@ -25,15 +28,6 @@ const mapHtml = `
   <style>
     * { margin: 0; padding: 0; }
     #map { width: 100%; height: 100vh; }
-    .custom-pin {
-      width: 32px; height: 42px;
-      display: flex; align-items: center; justify-content: center;
-      position: relative;
-    }
-    .pin-dot {
-      width: 14px; height: 14px; border-radius: 50%;
-      position: absolute; top: 6px; left: 9px;
-    }
   </style>
 </head>
 <body>
@@ -66,7 +60,7 @@ const mapHtml = `
     });
     L.marker([${CUSTOMER_LAT}, ${CUSTOMER_LNG}], { icon: customerIcon }).addTo(map);
 
-    // Driver marker (orange, animated)
+    // Driver marker (animated)
     var driverIcon = L.divIcon({
       html: '<div style="width:42px;height:42px;border-radius:50%;background:#FF6B35;border:3px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(255,107,53,0.5);animation:pulse 2s infinite"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div>',
       iconSize: [42, 42],
@@ -94,7 +88,7 @@ const mapHtml = `
       [${CUSTOMER_LAT}, ${CUSTOMER_LNG}],
     ], { padding: [50, 50] });
 
-    // Add pulse animation CSS
+    // Pulse animation
     var style = document.createElement('style');
     style.textContent = '@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,107,53,0.4); } 70% { box-shadow: 0 0 0 15px rgba(255,107,53,0); } 100% { box-shadow: 0 0 0 0 rgba(255,107,53,0); } }';
     document.head.appendChild(style);
@@ -106,15 +100,42 @@ const mapHtml = `
 export default function TrackOrderScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const c = useTheme();
+
+  const handleCall = () => {
+    Linking.openURL(`tel:${DRIVER_PHONE}`).catch(() => {
+      Alert.alert('Cannot call', 'Phone calls are not available on this device.');
+    });
+  };
+
+  const handleMessage = () => {
+    router.push('/order/chat');
+  };
+
+  const handleWhatsApp = () => {
+    const whatsappUrl = `whatsapp://send?phone=${DRIVER_PHONE.replace('+', '')}&text=Hi ${DRIVER_NAME}, how far are you with my order?`;
+    Linking.openURL(whatsappUrl).catch(() => {
+      Alert.alert('WhatsApp not available', 'WhatsApp is not installed on this device.');
+    });
+  };
+
+  // Go back to home — clear the stack to avoid stacking
+  const handleGoBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: c.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm, backgroundColor: c.background, opacity: 0.97 }]}>
+        <Pressable onPress={handleGoBack} style={[styles.backBtn, { backgroundColor: c.backgroundSecondary }]}>
+          <Ionicons name="arrow-back" size={22} color={c.text} />
         </Pressable>
-        <Text variant="h3">Track Order</Text>
+        <Text variant="h3" style={{ color: c.text }}>Track Order</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -130,18 +151,22 @@ export default function TrackOrderScreen() {
         />
       </View>
 
-      {/* Bottom card — order info */}
-      <View style={[styles.bottomCard, { paddingBottom: insets.bottom + spacing.base }]}>
+      {/* Bottom card */}
+      <View style={[styles.bottomCard, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background }]}>
         <View style={styles.estimateRow}>
-          <View style={styles.estimateBadge}>
-            <Ionicons name="time" size={16} color={colors.primary} />
-            <Text variant="bodySmall" style={styles.estimateText}>Estimated: 20 min</Text>
+          <View style={[styles.estimateBadge, { backgroundColor: c.primaryLight }]}>
+            <Ionicons name="time" size={16} color={c.primary} />
+            <Text variant="bodySmall" style={{ fontWeight: '600', color: c.primary, fontSize: 13 }}>
+              Estimated: 20 min
+            </Text>
           </View>
-          <View style={styles.statusDot} />
-          <Text variant="bodySmall" style={styles.statusText}>On the way</Text>
+          <View style={[styles.statusDot, { backgroundColor: c.secondary }]} />
+          <Text variant="bodySmall" style={{ fontWeight: '600', color: c.secondary, fontSize: 13 }}>
+            On the way
+          </Text>
         </View>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: c.borderLight }]} />
 
         {/* Restaurant info */}
         <View style={styles.restaurantRow}>
@@ -150,7 +175,9 @@ export default function TrackOrderScreen() {
             style={styles.restaurantImage}
           />
           <View style={styles.restaurantInfo}>
-            <Text variant="body" style={styles.restaurantName}>Uttora Coffee House</Text>
+            <Text variant="body" style={{ fontWeight: '700', fontSize: 15, color: c.text }}>
+              Uttora Coffee House
+            </Text>
             <Text variant="caption">Ordered At 06 Sept, 10:00pm</Text>
             <View style={styles.orderItems}>
               <Text variant="caption">2x Burger</Text>
@@ -159,23 +186,36 @@ export default function TrackOrderScreen() {
           </View>
         </View>
 
-        {/* Driver info */}
-        <View style={styles.driverRow}>
+        {/* Driver info with working buttons */}
+        <View style={[styles.driverRow, { backgroundColor: c.backgroundSecondary }]}>
           <View style={styles.driverInfo}>
-            <View style={styles.driverAvatar}>
-              <Ionicons name="person" size={18} color={colors.textInverse} />
-            </View>
+            <Image
+              source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100' }}
+              style={styles.driverAvatar}
+            />
             <View>
-              <Text variant="body" style={styles.driverName}>Robert K.</Text>
+              <Text variant="body" style={{ fontWeight: '700', color: c.text }}>{DRIVER_NAME}</Text>
               <Text variant="caption">Your delivery driver</Text>
             </View>
           </View>
           <View style={styles.driverActions}>
-            <Pressable style={styles.actionBtn}>
-              <Ionicons name="call" size={18} color={colors.primary} />
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: c.background, borderColor: c.border }]}
+              onPress={handleCall}
+            >
+              <Ionicons name="call" size={18} color={c.primary} />
             </Pressable>
-            <Pressable style={styles.actionBtn}>
-              <Ionicons name="chatbubble" size={18} color={colors.primary} />
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: c.background, borderColor: c.border }]}
+              onPress={handleMessage}
+            >
+              <Ionicons name="chatbubble" size={18} color={c.primary} />
+            </Pressable>
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: '#25D366', borderColor: '#25D366' }]}
+              onPress={handleWhatsApp}
+            >
+              <Ionicons name="logo-whatsapp" size={18} color="#FFF" />
             </Pressable>
           </View>
         </View>
@@ -185,61 +225,43 @@ export default function TrackOrderScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.xl, paddingBottom: spacing.sm,
     position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-    backgroundColor: 'rgba(255,255,255,0.95)',
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.backgroundSecondary,
-    alignItems: 'center', justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
   },
   mapContainer: { flex: 1 },
   map: { flex: 1 },
   bottomCard: {
-    backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: spacing.xl, paddingTop: spacing.xl, gap: spacing.lg,
     shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 12,
     elevation: 8,
   },
-  estimateRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-  },
+  estimateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   estimateBadge: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.primaryLight, paddingVertical: spacing.xs, paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.md, borderRadius: radius.full,
   },
-  estimateText: { fontWeight: '600', color: colors.primary, fontSize: 13 },
-  statusDot: {
-    width: 8, height: 8, borderRadius: 4, backgroundColor: colors.secondary,
-  },
-  statusText: { fontWeight: '600', color: colors.secondary, fontSize: 13 },
-  divider: { height: 1, backgroundColor: colors.borderLight },
-  restaurantRow: {
-    flexDirection: 'row', gap: spacing.md,
-  },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  divider: { height: 1 },
+  restaurantRow: { flexDirection: 'row', gap: spacing.md },
   restaurantImage: { width: 56, height: 56, borderRadius: radius.md },
   restaurantInfo: { flex: 1, gap: 2 },
-  restaurantName: { fontWeight: '700', fontSize: 15 },
   orderItems: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   driverRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary, borderRadius: radius.lg,
-    padding: spacing.md,
+    borderRadius: radius.lg, padding: spacing.md,
   },
   driverInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  driverAvatar: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  driverName: { fontWeight: '700' },
+  driverAvatar: { width: 40, height: 40, borderRadius: 20 },
   driverActions: { flexDirection: 'row', gap: spacing.sm },
   actionBtn: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.background,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.border,
+    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
   },
 });

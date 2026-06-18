@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, Card } from '../../src/components/ui';
 import { restaurants, menuItems, categories } from '../../src/services/mock/data';
 import { useCartStore } from '../../src/store';
+import { useTheme } from '../../src/providers/ThemeProvider';
 import { colors, spacing, radius } from '../../src/theme';
 
 export default function RestaurantScreen() {
@@ -12,13 +13,14 @@ export default function RestaurantScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const addItem = useCartStore((s) => s.addItem);
+  const c = useTheme();
 
   const restaurant = restaurants.find((r) => r.id === id);
   const menu = menuItems[id] || [];
 
   if (!restaurant) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: c.background }]}>
         <View style={[styles.backRow, { paddingTop: insets.top + spacing.sm }]}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -33,7 +35,7 @@ export default function RestaurantScreen() {
   const tags = restaurant.cuisine.split(' · ').map((t) => t.trim());
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: c.background }]}>
       {/* Header image with back + menu buttons */}
       <View>
         <Image source={{ uri: restaurant.image }} style={styles.coverImage} />

@@ -6,12 +6,14 @@ import { useState } from 'react';
 import { Header, SearchBar, RestaurantCard } from '../../src/components/shared';
 import { Text } from '../../src/components/ui';
 import { restaurants, recentKeywords, suggestedRestaurants, popularFoods } from '../../src/services/mock/data';
+import { useTheme } from '../../src/providers/ThemeProvider';
 import { colors, spacing, radius } from '../../src/theme';
 
 export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
+  const c = useTheme();
 
   const filtered = query
     ? restaurants.filter(
@@ -24,7 +26,7 @@ export default function SearchScreen() {
   const showResults = query.length > 0;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: c.background }]}>
       <Header title="Search" showBack onBack={() => router.back()} />
 
       <View style={styles.searchWrapper}>

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
 import { useCartStore } from '../../src/store';
+import { useTheme } from '../../src/providers/ThemeProvider';
 import { colors, spacing, radius } from '../../src/theme';
 
 export default function CheckoutScreen() {
@@ -12,6 +13,7 @@ export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
   const { items, getSubtotal, updateQuantity, removeItem } = useCartStore();
   const [address, setAddress] = useState('2118 Thornridge Cir. Syracuse');
+  const c = useTheme();
 
   const subtotal = getSubtotal();
   const deliveryFee = 0;
@@ -22,7 +24,7 @@ export default function CheckoutScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: c.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
