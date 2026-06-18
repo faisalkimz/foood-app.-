@@ -1,4 +1,4 @@
-import { View, StyleSheet, Pressable, ScrollView, Image, Switch } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView, Image, Switch, ActionSheetIOS, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,6 +54,27 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleDotsPress = () => {
+    const options = ['Cancel', 'Edit Profile', 'Settings', 'Share Profile'];
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, cancelButtonIndex: 0 },
+        (idx) => {
+          if (idx === 1) router.push('/profile/edit');
+          if (idx === 2) router.push('/profile/settings');
+          if (idx === 3) Alert.alert('Share', 'Share link copied!');
+        }
+      );
+    } else {
+      Alert.alert('Options', '', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Edit Profile', onPress: () => router.push('/profile/edit') },
+        { text: 'Settings', onPress: () => router.push('/profile/settings') },
+        { text: 'Share Profile', onPress: () => Alert.alert('Share', 'Share link copied!') },
+      ]);
+    }
+  };
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: c.background }]}
@@ -63,7 +84,7 @@ export default function ProfileScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Text variant="h3" style={{ color: c.text }}>Profile</Text>
-        <Pressable hitSlop={8}>
+        <Pressable hitSlop={8} onPress={handleDotsPress}>
           <Ionicons name="ellipsis-horizontal" size={22} color={c.text} />
         </Pressable>
       </View>

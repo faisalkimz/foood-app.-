@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, Image, TextInput, Alert } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView, Image, TextInput, Alert, ActionSheetIOS, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Text } from '../../src/components/ui';
 import { useAuthStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
@@ -19,6 +20,44 @@ export default function EditProfileScreen() {
   const [email, setEmail] = useState(user?.email || 'hello@halallab.co');
   const [phone, setPhone] = useState('408-841-0926');
   const [bio, setBio] = useState('I love fast food');
+  const [avatarUri, setAvatarUri] = useState('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200');
+
+  const pickImage = async (useCamera) => {
+    const permission = useCamera
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert('Permission Required', `Please allow ${useCamera ? 'camera' : 'photo library'} access.`);
+      return;
+    }
+
+    const result = useCamera
+      ? await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.8 })
+      : await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.8, mediaTypes: ['images'] });
+
+    if (!result.canceled && result.assets?.[0]) {
+      setAvatarUri(result.assets[0].uri);
+    }
+  };
+
+  const handleAvatarPress = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ['Cancel', 'Take Photo', 'Choose from Library'], cancelButtonIndex: 0 },
+        (idx) => {
+          if (idx === 1) pickImage(true);
+          if (idx === 2) pickImage(false);
+        }
+      );
+    } else {
+      Alert.alert('Change Photo', 'Choose an option', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Take Photo', onPress: () => pickImage(true) },
+        { text: 'Choose from Library', onPress: () => pickImage(false) },
+      ]);
+    }
+  };
 
   const handleSave = () => {
     updateUser({ name, email });
@@ -42,17 +81,15 @@ export default function EditProfileScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Avatar edit */}
+        {/* Avatar — tap to change */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatarWrap}>
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200' }}
-              style={styles.avatar}
-            />
-            <Pressable style={[styles.editAvatarBtn, { backgroundColor: c.primary }]}>
+          <Pressable style={styles.avatarWrap} onPress={handleAvatarPress}>
+            <Image source={{ uri: avatarUri }} style={styles.avatar} />
+            <View style={[styles.editAvatarBtn, { backgroundColor: c.primary }]}>
               <Ionicons name="camera" size={16} color="#FFF" />
-            </Pressable>
-          </View>
+            </View>
+          </Pressable>
+          <Text variant="caption" style={{ marginTop: spacing.sm }}>Tap to change photo</Text>
         </View>
 
         {/* Form fields */}

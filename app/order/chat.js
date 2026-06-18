@@ -100,7 +100,7 @@ export default function ChatScreen() {
             <Text variant="caption" style={{ fontSize: 11 }}>Online</Text>
           </View>
         </View>
-        <Pressable style={[styles.headerAction, { backgroundColor: c.backgroundSecondary }]}>
+        <Pressable style={[styles.headerAction, { backgroundColor: c.backgroundSecondary }]} onPress={() => router.push('/order/call')}>
           <Ionicons name="call" size={18} color={c.primary} />
         </Pressable>
       </View>
