@@ -18,14 +18,17 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(auth)" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
           <Stack.Screen name="restaurant/[id]" options={{ presentation: 'card' }} />
           <Stack.Screen name="food/[id]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="checkout/index" />
           <Stack.Screen name="checkout/payment" />
-          <Stack.Screen name="checkout/congratulations" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="order/[id]" />
+          <Stack.Screen
+            name="checkout/congratulations"
+            options={{ gestureEnabled: false, animation: 'fade' }}
+          />
+          <Stack.Screen name="order/[id]" options={{ gestureEnabled: false }} />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>
