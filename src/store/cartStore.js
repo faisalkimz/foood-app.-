@@ -6,6 +6,7 @@ export const useCartStore = create((set, get) => ({
 
   addItem: (item) => {
     const { items, restaurantId } = get();
+    const qty = item.quantity || 1;
 
     if (restaurantId && restaurantId !== item.restaurantId) {
       return { error: 'Cart contains items from another restaurant' };
@@ -15,13 +16,13 @@ export const useCartStore = create((set, get) => ({
     if (existing) {
       set({
         items: items.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.id === item.id ? { ...i, quantity: i.quantity + qty } : i
         ),
         restaurantId: item.restaurantId,
       });
     } else {
       set({
-        items: [...items, { ...item, quantity: 1 }],
+        items: [...items, { ...item, quantity: qty }],
         restaurantId: item.restaurantId,
       });
     }

@@ -1,4 +1,4 @@
-import { View, StyleSheet, FlatList, Image } from 'react-native';
+import { View, StyleSheet, FlatList, Image, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,7 +60,10 @@ export default function OrdersScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <View style={styles.orderCard}>
+          <Pressable
+            style={styles.orderCard}
+            onPress={() => router.push(`/order/${item.id}`)}
+          >
             <Image source={{ uri: item.image }} style={styles.orderImage} />
             <View style={styles.orderInfo}>
               <Text variant="body" style={styles.orderRestaurant} numberOfLines={1}>
@@ -83,7 +86,7 @@ export default function OrdersScreen() {
               </View>
               <Text variant="caption" style={styles.orderDate}>{item.date}</Text>
             </View>
-          </View>
+          </Pressable>
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />

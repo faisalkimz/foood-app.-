@@ -3,7 +3,6 @@ import { View, StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform 
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../src/components/ui';
-import { useAuthStore } from '../../src/store';
 import { colors, spacing, radius } from '../../src/theme';
 
 const CODE_LENGTH = 4;
@@ -11,7 +10,6 @@ const CODE_LENGTH = 4;
 export default function VerificationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const login = useAuthStore((s) => s.login);
 
   const [code, setCode] = useState(['', '', '', '']);
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -52,8 +50,7 @@ export default function VerificationScreen() {
     const fullCode = code.join('');
     if (fullCode.length === CODE_LENGTH) {
       // Mock verification — accept any 4-digit code
-      login({ id: '1', name: 'Guest User', email: 'guest@foodorder.com' });
-      router.replace('/(tabs)');
+      router.replace('/(auth)/location');
     }
   };
 

@@ -106,13 +106,17 @@ export default function SearchScreen() {
                 <Text variant="h3" style={styles.sectionTitle}>Popular Fast Food</Text>
                 <View style={styles.popularRow}>
                   {popularFoods.map((food) => (
-                    <View key={food.id} style={styles.popularCard}>
+                    <Pressable
+                      key={food.id}
+                      style={styles.popularCard}
+                      onPress={() => setQuery(food.name)}
+                    >
                       <Image source={{ uri: food.image }} style={styles.popularImage} />
                       <Text variant="body" style={styles.popularName} numberOfLines={1}>
                         {food.name}
                       </Text>
                       <Text variant="caption" numberOfLines={1}>{food.restaurant}</Text>
-                    </View>
+                    </Pressable>
                   ))}
                 </View>
               </View>

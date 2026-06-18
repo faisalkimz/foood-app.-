@@ -1,10 +1,11 @@
-import { View, ScrollView, StyleSheet, FlatList, Pressable, Image } from 'react-native';
+import { useState } from 'react';
+import { View, ScrollView, StyleSheet, FlatList, Pressable, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Card } from '../../src/components/ui';
+import { Text } from '../../src/components/ui';
 import { SearchBar, RestaurantCard } from '../../src/components/shared';
-import { useAuthStore } from '../../src/store';
+import { useAuthStore, useCartStore } from '../../src/store';
 import { categories, restaurants } from '../../src/services/mock/data';
 import { colors, spacing, radius } from '../../src/theme';
 
@@ -12,6 +13,16 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
+  const [selectedCategory, setSelectedCategory] = useState('1');
+
+  // Filter restaurants by selected category
+  const selectedCatName = categories.find((c) => c.id === selectedCategory)?.name || 'All';
+  const filteredRestaurants =
+    selectedCatName === 'All'
+      ? restaurants
+      : restaurants.filter((r) =>
+          r.cuisine.toLowerCase().includes(selectedCatName.toLowerCase())
+        );
 
   return (
     <ScrollView
@@ -28,7 +39,7 @@ export default function HomeScreen() {
           </View>
           <Text variant="body" style={styles.address}>Halal Lab office</Text>
         </View>
-        <Pressable style={styles.avatarBtn}>
+        <Pressable style={styles.avatarBtn} onPress={() => router.push('/(tabs)/profile')}>
           <Image
             source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' }}
             style={styles.avatar}
@@ -49,7 +60,7 @@ export default function HomeScreen() {
         <SearchBar onPress={() => router.push('/(tabs)/search')} />
       </View>
 
-      {/* Categories */}
+      {/* Categories — now tappable with filtering */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text variant="h3">All Categories</Text>
@@ -64,21 +75,21 @@ export default function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesList}
           renderItem={({ item }) => (
-            <Pressable style={styles.categoryItem}>
+            <Pressable
+              style={styles.categoryItem}
+              onPress={() => setSelectedCategory(item.id)}
+            >
               <View style={[
                 styles.categoryCircle,
-                item.name === 'All' && styles.categoryCircleActive,
+                selectedCategory === item.id && styles.categoryCircleActive,
               ]}>
-                <Image
-                  source={{ uri: item.image }}
-                  style={styles.categoryImage}
-                />
+                <Image source={{ uri: item.image }} style={styles.categoryImage} />
               </View>
               <Text
                 variant="caption"
                 style={[
                   styles.categoryName,
-                  item.name === 'All' && styles.categoryNameActive,
+                  selectedCategory === item.id && styles.categoryNameActive,
                 ]}
               >
                 {item.name}
@@ -88,21 +99,32 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* Open Restaurants */}
+      {/* Filtered Restaurants */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text variant="h3">Open Restaurants</Text>
+          <Text variant="h3">
+            {selectedCatName === 'All' ? 'Open Restaurants' : `${selectedCatName} Restaurants`}
+          </Text>
           <Pressable hitSlop={8}>
             <Text variant="bodySmall" style={styles.seeAll}>See All &gt;</Text>
           </Pressable>
         </View>
-        {restaurants.slice(0, 5).map((restaurant) => (
-          <RestaurantCard
-            key={restaurant.id}
-            restaurant={restaurant}
-            onPress={() => router.push(`/restaurant/${restaurant.id}`)}
-          />
-        ))}
+        {filteredRestaurants.length > 0 ? (
+          filteredRestaurants.map((restaurant) => (
+            <RestaurantCard
+              key={restaurant.id}
+              restaurant={restaurant}
+              onPress={() => router.push(`/restaurant/${restaurant.id}`)}
+            />
+          ))
+        ) : (
+          <View style={styles.emptyCategory}>
+            <Ionicons name="restaurant-outline" size={40} color={colors.textMuted} />
+            <Text variant="bodySmall" style={styles.emptyCategoryText}>
+              No restaurants found for {selectedCatName}
+            </Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -210,5 +232,14 @@ const styles = StyleSheet.create({
   categoryNameActive: {
     color: colors.primary,
     fontWeight: '700',
+  },
+  emptyCategory: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing['3xl'],
+    gap: spacing.md,
+  },
+  emptyCategoryText: {
+    color: colors.textMuted,
   },
 });

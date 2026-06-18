@@ -1,4 +1,4 @@
-import { View, FlatList, StyleSheet, Image, Pressable, ScrollView } from 'react-native';
+import { View, FlatList, StyleSheet, Image, Pressable, ScrollView, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -124,7 +124,14 @@ export default function RestaurantScreen() {
                 </View>
                 <Pressable
                   style={styles.addBtn}
-                  onPress={() => addItem(item)}
+                  onPress={() => {
+                    const result = addItem(item);
+                    if (result?.error) {
+                      Alert.alert('Different Restaurant', result.error);
+                    } else {
+                      Alert.alert('✅ Added!', `${item.name} added to cart`);
+                    }
+                  }}
                   hitSlop={8}
                 >
                   <Ionicons name="add" size={20} color={colors.textInverse} />

@@ -1,4 +1,5 @@
-import { View, StyleSheet, Image, ScrollView, Pressable, Platform } from 'react-native';
+import { useState } from 'react';
+import { View, StyleSheet, Image, ScrollView, Pressable, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +11,7 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { items, getSubtotal, updateQuantity, removeItem } = useCartStore();
+  const [address, setAddress] = useState('2118 Thornridge Cir. Syracuse');
 
   const subtotal = getSubtotal();
   const deliveryFee = 0;
@@ -27,7 +29,7 @@ export default function CheckoutScreen() {
           <Ionicons name="arrow-back" size={22} color={colors.textInverse} />
         </Pressable>
         <Text variant="h3" style={styles.headerTitle}>Cart</Text>
-        <Pressable hitSlop={8}>
+        <Pressable hitSlop={8} onPress={() => router.push('/(tabs)/cart')}>
           <Text variant="bodySmall" style={styles.editText}>EDIT ITEMS</Text>
         </Pressable>
       </View>
@@ -82,13 +84,21 @@ export default function CheckoutScreen() {
         <View style={styles.addressSection}>
           <View style={styles.addressHeader}>
             <Text variant="label" style={styles.addressLabel}>DELIVERY ADDRESS</Text>
-            <Pressable hitSlop={8}>
+            <Pressable hitSlop={8} onPress={() => {
+              Alert.prompt(
+                'Edit Address',
+                'Enter your delivery address',
+                (text) => { if (text) setAddress(text); },
+                'plain-text',
+                address
+              );
+            }}>
               <Text variant="bodySmall" style={styles.editLink}>EDIT</Text>
             </Pressable>
           </View>
           <View style={styles.addressBox}>
             <Ionicons name="location-outline" size={18} color={colors.textMuted} />
-            <Text variant="body" style={styles.addressText}>2118 Thornridge Cir. Syracuse</Text>
+            <Text variant="body" style={styles.addressText}>{address}</Text>
           </View>
         </View>
 

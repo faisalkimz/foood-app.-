@@ -18,7 +18,7 @@ export default function SignupScreen() {
 
   const handleSignup = () => {
     login({ id: '1', name: name || 'New User', email: email || 'user@foodorder.com' });
-    router.replace('/(auth)/location');
+    router.push('/(auth)/verification');
   };
 
   return (
