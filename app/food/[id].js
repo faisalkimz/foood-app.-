@@ -33,13 +33,13 @@ export default function FoodDetailScreen() {
     return (
       <View style={[styles.container, { backgroundColor: c.background }]}>
         <View style={[styles.headerBar, { paddingTop: insets.top + spacing.sm }]}>
-          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-            <Ionicons name="arrow-back" size={22} color={colors.text} />
+          <Pressable onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: c.backgroundSecondary }]}>
+            <Ionicons name="arrow-back" size={22} color={c.text} />
           </Pressable>
-          <Text variant="h3">Details</Text>
+          <Text variant="h3" style={{ color: c.text }}>Details</Text>
           <View style={{ width: 40 }} />
         </View>
-        <Text variant="body" style={styles.notFound}>Item not found</Text>
+        <Text variant="body" style={[styles.notFound, { color: c.text }]}>Item not found</Text>
       </View>
     );
   }
@@ -85,50 +85,50 @@ export default function FoodDetailScreen() {
     <View style={[styles.container, { backgroundColor: c.background }]}>
       {/* Header */}
       <View style={[styles.headerBar, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
+        <Pressable onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: c.backgroundSecondary }]}>
+          <Ionicons name="arrow-back" size={22} color={c.text} />
         </Pressable>
-        <Text variant="h3">Details</Text>
+        <Text variant="h3" style={{ color: c.text }}>Details</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         {/* Food image */}
-        <View style={styles.imageWrapper}>
+        <View style={[styles.imageWrapper, { backgroundColor: c.backgroundSecondary }]}>
           <Image source={{ uri: item.image }} style={styles.foodImage} />
-          <Pressable style={styles.heartBtn} onPress={() => setIsFav(!isFav)}>
+          <Pressable style={[styles.heartBtn, { backgroundColor: c.background }]} onPress={() => setIsFav(!isFav)}>
             <Ionicons
               name={isFav ? 'heart' : 'heart-outline'}
               size={22}
-              color={colors.primary}
+              color={c.primary}
             />
           </Pressable>
         </View>
 
         <View style={styles.content}>
-          <Text variant="h1" style={styles.foodName}>{item.name}</Text>
-          <Text variant="bodySmall" style={styles.description}>{item.description}</Text>
+          <Text variant="h2" style={[styles.foodName, { color: c.text }]}>{item.name}</Text>
+          <Text variant="bodySmall" style={[styles.description, { color: c.textSecondary }]}>{item.description}</Text>
 
           <View style={styles.ratingRow}>
-            <Ionicons name="star" size={14} color={colors.rating} />
-            <Text variant="bodySmall" style={styles.ratingText}>4.7</Text>
-            <Ionicons name="bicycle-outline" size={14} color={colors.primary} style={{ marginLeft: spacing.md }} />
-            <Text variant="bodySmall" style={styles.ratingText}>Free</Text>
-            <Ionicons name="time-outline" size={14} color={colors.primary} style={{ marginLeft: spacing.md }} />
-            <Text variant="bodySmall" style={styles.ratingText}>20 min</Text>
+            <Ionicons name="star" size={14} color={c.rating} />
+            <Text variant="body" style={[styles.ratingText, { color: c.text }]}>{item.rating || '4.7'}</Text>
+            <Ionicons name="bicycle-outline" size={14} color={c.primary} style={{ marginLeft: spacing.md }} />
+            <Text variant="bodySmall" style={[styles.ratingText, { color: c.text }]}>Free</Text>
+            <Ionicons name="time-outline" size={14} color={c.primary} style={{ marginLeft: spacing.md }} />
+            <Text variant="bodySmall" style={[styles.ratingText, { color: c.text }]}>20 min</Text>
           </View>
 
-          <Text variant="label" style={styles.sizeLabel}>SIZE:</Text>
+          <Text variant="label" style={[styles.sizeLabel, { color: c.text }]}>SIZE:</Text>
           <View style={styles.sizeRow}>
             {sizes.map((s) => (
               <Pressable
                 key={s.value}
-                style={[styles.sizeBtn, selectedSize === s.value && styles.sizeBtnActive]}
+                style={[styles.sizeBtn, { backgroundColor: c.backgroundSecondary, borderColor: c.border }, selectedSize === s.value && { backgroundColor: c.primary, borderColor: c.primary }]}
                 onPress={() => setSelectedSize(s.value)}
               >
                 <Text
                   variant="bodySmall"
-                  style={[styles.sizeText, selectedSize === s.value && styles.sizeTextActive]}
+                  style={[styles.sizeText, { color: c.text }, selectedSize === s.value && { color: '#FFF' }]}
                 >
                   {s.label}
                 </Text>
@@ -136,10 +136,10 @@ export default function FoodDetailScreen() {
             ))}
           </View>
 
-          <Text variant="label" style={styles.ingredientsLabel}>INGREDIENTS:</Text>
+          <Text variant="label" style={[styles.ingredientsLabel, { color: c.text }]}>INGREDIENTS:</Text>
           <View style={styles.ingredientsRow}>
             {['🧅', '🧄', '🌶️', '🥬', '🍅'].map((emoji, idx) => (
-              <View key={idx} style={styles.ingredientCircle}>
+              <View key={idx} style={[styles.ingredientCircle, { backgroundColor: c.backgroundSecondary }]}>
                 <Text style={styles.ingredientEmoji}>{emoji}</Text>
               </View>
             ))}
@@ -148,8 +148,8 @@ export default function FoodDetailScreen() {
       </ScrollView>
 
       {/* Bottom bar */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base }]}>
-        <Text variant="h2" style={styles.totalPrice}>${totalPrice}</Text>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background, borderTopColor: c.borderLight }]}>
+        <Text variant="h2" style={[styles.totalPrice, { color: c.text }]}>${totalPrice}</Text>
 
         <View style={styles.quantityRow}>
           <Pressable style={styles.qtyBtn} onPress={() => setQuantity(Math.max(1, quantity - 1))}>

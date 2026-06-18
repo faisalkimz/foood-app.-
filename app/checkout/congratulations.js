@@ -90,7 +90,7 @@ export default function CongratulationsScreen() {
       <Animated.View style={[styles.bottom, { opacity: fadeAnim }]}>
         <Pressable
           style={styles.trackBtn}
-          onPress={() => router.replace('/order/latest')}
+          onPress={() => router.replace('/order/oo1')}
         >
           <Text variant="body" style={styles.trackBtnText}>TRACK ORDER</Text>
         </Pressable>

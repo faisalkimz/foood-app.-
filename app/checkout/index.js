@@ -110,7 +110,7 @@ export default function CheckoutScreen() {
             <Text variant="caption" style={styles.totalLabel}>TOTAL:</Text>
             <Text variant="h2" style={styles.totalPrice}>${total}</Text>
           </View>
-          <Pressable hitSlop={8}>
+          <Pressable hitSlop={8} onPress={() => Alert.alert('Price Breakdown', `Subtotal: $${subtotal}\nDelivery Fee: Free\n\nTotal: $${total}`)}>
             <Text variant="bodySmall" style={styles.breakdownLink}>
               Breakdown &gt;
             </Text>

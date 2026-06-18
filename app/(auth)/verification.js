@@ -79,10 +79,10 @@ export default function VerificationScreen() {
       <View style={styles.content}>
         {/* Code type toggle */}
         <View style={styles.toggleRow}>
-          <Pressable style={[styles.toggleBtn, styles.toggleActive]}>
+          <Pressable style={[styles.toggleBtn, styles.toggleActive]} onPress={() => {}}>
             <Text variant="bodySmall" style={styles.toggleActiveText}>CODE</Text>
           </Pressable>
-          <Pressable style={styles.toggleBtn}>
+          <Pressable style={styles.toggleBtn} onPress={() => router.replace('/(auth)/forgot-password')}>
             <Text variant="bodySmall" style={styles.toggleText}>Password</Text>
           </Pressable>
         </View>

@@ -56,7 +56,11 @@ export default function PaymentMethodScreen() {
           </View>
         )}
         ListFooterComponent={
-          <Pressable style={[styles.addBtn, { borderColor: c.primary }]}>
+          <Pressable style={[styles.addBtn, { borderColor: c.primary }]} onPress={() => {
+            const newId = Date.now().toString();
+            setCards((prev) => [...prev, { id: newId, type: 'Visa', last4: String(Math.floor(1000 + Math.random() * 9000)), expiry: '01/30', holder: 'New Card' }]);
+            Alert.alert('✅ Card Added', 'New card has been saved.');
+          }}>
             <Ionicons name="add" size={20} color={c.primary} />
             <Text variant="body" style={{ color: c.primary, fontWeight: '700' }}>ADD NEW CARD</Text>
           </Pressable>

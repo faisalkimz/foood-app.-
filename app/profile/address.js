@@ -47,7 +47,9 @@ export default function AddressScreen() {
       >
         {/* Saved addresses */}
         {savedAddresses.map((addr) => (
-          <Pressable key={addr.id} style={[styles.addressCard, { backgroundColor: c.backgroundSecondary }]}>
+          <Pressable key={addr.id} style={[styles.addressCard, { backgroundColor: c.backgroundSecondary }]}
+            onPress={() => Alert.alert('📍 Selected', `Delivering to: ${addr.address}`, [{ text: 'OK', onPress: () => router.back() }])}>
+
             <View style={styles.addressLeft}>
               <View style={[styles.addressIcon, { backgroundColor: c.primaryLight }]}>
                 <Ionicons name={addr.icon} size={18} color={c.primary} />

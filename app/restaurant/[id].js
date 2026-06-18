@@ -23,7 +23,7 @@ export default function RestaurantScreen() {
       <View style={[styles.container, { backgroundColor: c.background }]}>
         <View style={[styles.backRow, { paddingTop: insets.top + spacing.sm }]}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={c.text} />
           </Pressable>
         </View>
         <Text variant="body" style={styles.notFound}>Restaurant not found</Text>
@@ -43,40 +43,44 @@ export default function RestaurantScreen() {
           <Pressable onPress={() => router.back()} style={styles.iconBtn}>
             <Ionicons name="arrow-back" size={22} color={colors.text} />
           </Pressable>
-          <Pressable style={styles.iconBtn}>
+          <Pressable style={styles.iconBtn} onPress={() => Alert.alert('Options', '', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Add to Favourites', onPress: () => Alert.alert('❤️ Added', 'Restaurant saved to favourites!') },
+            { text: 'Share', onPress: () => Alert.alert('📤 Shared', 'Link copied to clipboard!') },
+          ])}>
             <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
           </Pressable>
         </View>
       </View>
 
       <ScrollView
-        style={styles.body}
+        style={[styles.body, { backgroundColor: c.background }]}
         contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xl }}
         showsVerticalScrollIndicator={false}
       >
         {/* Restaurant info */}
         <View style={styles.info}>
-          <Text variant="caption" style={styles.viewLabel}>Restaurant View</Text>
-          <Text variant="h1" style={styles.name}>{restaurant.name}</Text>
-          <Text variant="bodySmall" style={styles.description}>
+          <Text variant="caption" style={[styles.viewLabel, { color: c.textMuted }]}>Restaurant View</Text>
+          <Text variant="h1" style={[styles.name, { color: c.text }]}>{restaurant.name}</Text>
+          <Text variant="bodySmall" style={[styles.description, { color: c.textSecondary }]}>
             Maecenas sed diam eget risus varius blandit sit amet non magna. Integer posuere erat a ante venenatis dapibus posuere velit aliquet.
           </Text>
 
           {/* Meta row */}
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
-              <Ionicons name="star" size={14} color={colors.primary} />
-              <Text variant="bodySmall" style={styles.metaValue}>{restaurant.rating}</Text>
+              <Ionicons name="star" size={14} color={c.primary} />
+              <Text variant="bodySmall" style={[styles.metaValue, { color: c.text }]}>{restaurant.rating}</Text>
             </View>
             <View style={styles.metaItem}>
-              <Ionicons name="bicycle-outline" size={16} color={colors.primary} />
-              <Text variant="bodySmall" style={styles.metaValue}>
+              <Ionicons name="bicycle-outline" size={16} color={c.primary} />
+              <Text variant="bodySmall" style={[styles.metaValue, { color: c.text }]}>
                 {restaurant.freeDelivery ? 'Free' : `$${restaurant.deliveryFee}`}
               </Text>
             </View>
             <View style={styles.metaItem}>
-              <Ionicons name="time-outline" size={16} color={colors.primary} />
-              <Text variant="bodySmall" style={styles.metaValue}>{restaurant.deliveryTime} min</Text>
+              <Ionicons name="time-outline" size={16} color={c.primary} />
+              <Text variant="bodySmall" style={[styles.metaValue, { color: c.text }]}>{restaurant.deliveryTime} min</Text>
             </View>
           </View>
 
@@ -86,11 +90,11 @@ export default function RestaurantScreen() {
               {tags.map((tag, idx) => (
                 <Pressable
                   key={idx}
-                  style={[styles.tag, idx === 0 && styles.tagActive]}
+                  style={[styles.tag, { backgroundColor: c.backgroundSecondary, borderColor: c.border }, idx === 0 && { backgroundColor: c.primary, borderColor: c.primary }]}
                 >
                   <Text
                     variant="caption"
-                    style={[styles.tagText, idx === 0 && styles.tagTextActive]}
+                    style={[styles.tagText, { color: c.textSecondary }, idx === 0 && { color: '#FFF' }]}
                   >
                     {tag}
                   </Text>
@@ -102,25 +106,25 @@ export default function RestaurantScreen() {
 
         {/* Menu items */}
         <View style={styles.menuSection}>
-          <Text variant="h3" style={styles.menuTitle}>
+          <Text variant="h3" style={[styles.menuTitle, { color: c.text }]}>
             {tags[0] || 'Menu'} ({menu.length})
           </Text>
           <View style={styles.menuGrid}>
             {menu.map((item) => (
               <Pressable
                 key={item.id}
-                style={styles.menuCard}
+                style={[styles.menuCard, { backgroundColor: c.backgroundSecondary }]}
                 onPress={() => router.push(`/food/${item.id}`)}
               >
                 <Image source={{ uri: item.image }} style={styles.menuImage} />
                 <View style={styles.menuInfo}>
-                  <Text variant="body" style={styles.menuName} numberOfLines={1}>
+                  <Text variant="body" style={[styles.menuName, { color: c.text }]} numberOfLines={1}>
                     {item.name}
                   </Text>
                   <Text variant="caption" numberOfLines={1}>
                     {item.restaurant || restaurant.name}
                   </Text>
-                  <Text variant="body" style={styles.menuPrice}>
+                  <Text variant="body" style={[styles.menuPrice, { color: c.primary }]}>
                     ${item.price}
                   </Text>
                 </View>

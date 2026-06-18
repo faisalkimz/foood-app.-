@@ -88,13 +88,13 @@ export default function LoginScreen() {
 
           {/* Social login icons */}
           <View style={styles.socialRow}>
-            <Pressable style={[styles.socialButton, styles.socialFacebook]}>
+            <Pressable style={[styles.socialButton, styles.socialFacebook]} onPress={handleLogin}>
               <Ionicons name="logo-facebook" size={24} color={colors.textInverse} />
             </Pressable>
-            <Pressable style={[styles.socialButton, styles.socialTwitter]}>
+            <Pressable style={[styles.socialButton, styles.socialTwitter]} onPress={handleLogin}>
               <Ionicons name="logo-twitter" size={24} color={colors.textInverse} />
             </Pressable>
-            <Pressable style={[styles.socialButton, styles.socialApple]}>
+            <Pressable style={[styles.socialButton, styles.socialApple]} onPress={handleLogin}>
               <Ionicons name="logo-apple" size={24} color={colors.textInverse} />
             </Pressable>
           </View>

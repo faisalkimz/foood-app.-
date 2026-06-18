@@ -19,8 +19,8 @@ export default function CartScreen() {
       <View style={[styles.container, { backgroundColor: c.background }]}>
         <Header title="My Cart" />
         <View style={styles.emptyState}>
-          <Ionicons name="cart-outline" size={64} color={colors.textMuted} />
-          <Text variant="h3" style={styles.emptyTitle}>Your cart is empty</Text>
+          <Ionicons name="cart-outline" size={64} color={c.textMuted} />
+          <Text variant="h3" style={[styles.emptyTitle, { color: c.text }]}>Your cart is empty</Text>
           <Text variant="bodySmall" style={styles.emptyText}>
             Add items from a restaurant to get started
           </Text>
@@ -85,25 +85,25 @@ export default function CartScreen() {
             </View>
             <View style={styles.summaryRow}>
               <Text variant="body">Delivery Fee</Text>
-              <Text variant="body" style={[styles.summaryValue, { color: colors.success }]}>
+              <Text variant="body" style={[styles.summaryValue, { color: c.success }]}>
                 {deliveryFee === 0 ? 'Free' : `$${deliveryFee.toFixed(2)}`}
               </Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <Text variant="h3">Total</Text>
-              <Text variant="h3" style={{ color: colors.primary }}>${grandTotal.toFixed(2)}</Text>
+              <Text variant="h3" style={{ color: c.primary }}>${grandTotal.toFixed(2)}</Text>
             </View>
           </View>
         }
       />
 
       {/* Checkout button */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base }]}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background }]}>
         <Pressable style={styles.checkoutBtn} onPress={() => router.push('/checkout')}>
           <Text variant="body" style={styles.checkoutText}>CHECKOUT</Text>
           <View style={styles.checkoutBadge}>
-            <Ionicons name="arrow-forward" size={18} color={colors.primary} />
+            <Ionicons name="arrow-forward" size={18} color={c.primary} />
           </View>
         </Pressable>
       </View>

@@ -32,10 +32,10 @@ export default function HomeScreen() {
       {/* Top bar */}
       <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
         <View>
-          <View style={styles.deliverRow}>
+          <Pressable style={styles.deliverRow} onPress={() => router.push('/profile/address')}>
             <Text variant="caption" style={[styles.deliverLabel, { color: c.primary }]}>DELIVER TO</Text>
             <Ionicons name="chevron-down" size={14} color={c.primary} />
-          </View>
+          </Pressable>
           <Text variant="body" style={[styles.address, { color: c.text }]}>Halal Lab office</Text>
         </View>
         <Pressable style={[styles.avatarBtn, { borderColor: c.primary }]} onPress={() => router.push('/(tabs)/profile')}>
@@ -63,7 +63,7 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text variant="h3" style={{ color: c.text }}>All Categories</Text>
-          <Pressable hitSlop={8}>
+          <Pressable hitSlop={8} onPress={() => router.push('/(tabs)/search')}>
             <Text variant="bodySmall" style={{ color: c.primary }}>See All &gt;</Text>
           </Pressable>
         </View>
@@ -100,7 +100,7 @@ export default function HomeScreen() {
           <Text variant="h3" style={{ color: c.text }}>
             {selectedCatName === 'All' ? 'Open Restaurants' : `${selectedCatName} Restaurants`}
           </Text>
-          <Pressable hitSlop={8}>
+          <Pressable hitSlop={8} onPress={() => router.push('/(tabs)/search')}>
             <Text variant="bodySmall" style={{ color: c.primary }}>See All &gt;</Text>
           </Pressable>
         </View>

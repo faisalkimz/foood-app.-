@@ -71,7 +71,10 @@ export default function OrdersScreen() {
           <Ionicons name="arrow-back" size={22} color={c.text} />
         </Pressable>
         <Text variant="h3" style={{ color: c.text }}>My Orders</Text>
-        <Pressable hitSlop={8}>
+        <Pressable hitSlop={8} onPress={() => Alert.alert('Orders', '', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Clear History', style: 'destructive' },
+        ])}>
           <Ionicons name="ellipsis-horizontal" size={22} color={c.text} />
         </Pressable>
       </View>
