@@ -32,18 +32,18 @@ export const allOrders = [
 ];
 
 export const activityLog = [
-  { id: 'a1', action: 'New order placed', detail: 'ORD-1004 by Robert Fox — $39.47', type: 'order', time: '2 min ago' },
+  { id: 'a1', action: 'New order placed', detail: 'ORD-1004 by Robert Fox — UGX 39,470', type: 'order', time: '2 min ago' },
   { id: 'a2', action: 'Chef approved', detail: 'David Kim (Sushi Master) approved by admin', type: 'chef', time: '15 min ago' },
   { id: 'a3', action: 'Order delivered', detail: 'ORD-1001 delivered to Sarah Johnson in 28 min', type: 'order', time: '30 min ago' },
   { id: 'a4', action: 'User registered', detail: 'New user Tom Brown signed up', type: 'user', time: '1h ago' },
-  { id: 'a5', action: 'Menu item added', detail: 'Marco Rossi added "Truffle Pasta" — $18.99', type: 'menu', time: '1h ago' },
+  { id: 'a5', action: 'Menu item added', detail: 'Marco Rossi added "Truffle Pasta" — UGX 18,990', type: 'menu', time: '1h ago' },
   { id: 'a6', action: 'Order cancelled', detail: 'ORD-1007 cancelled by Tom Brown', type: 'order', time: '2h ago' },
-  { id: 'a7', action: 'Payment received', detail: '$17.50 from Anna Smith via Cash', type: 'payment', time: '2h ago' },
+  { id: 'a7', action: 'Payment received', detail: 'UGX 17,500 from Anna Smith via Cash', type: 'payment', time: '2h ago' },
   { id: 'a8', action: 'Chef deactivated', detail: 'Carlos Mendez (Taco Fiesta) deactivated', type: 'chef', time: '3h ago' },
   { id: 'a9', action: 'Review submitted', detail: 'Emily Chen rated Café Bliss ⭐ 4.5', type: 'review', time: '3h ago' },
   { id: 'a10', action: 'User promoted', detail: 'Lisa Anderson promoted to Chef role', type: 'user', time: '5h ago' },
   { id: 'a11', action: 'Order delivered', detail: 'ORD-1005 delivered to Lisa Anderson in 32 min', type: 'order', time: '6h ago' },
-  { id: 'a12', action: 'New order placed', detail: 'ORD-1009 by Sarah Johnson — $8.50', type: 'order', time: '8h ago' },
+  { id: 'a12', action: 'New order placed', detail: 'ORD-1009 by Sarah Johnson — UGX 8,500', type: 'order', time: '8h ago' },
 ];
 
 export const revenueByDay = [

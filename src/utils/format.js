@@ -1,5 +1,6 @@
 export function formatCurrency(amount) {
-  return `$${amount.toFixed(2)}`;
+  const num = Math.round(amount);
+  return `UGX ${num.toLocaleString('en-UG')}`;
 }
 
 export function formatDeliveryTime(minutes) {

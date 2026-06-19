@@ -31,7 +31,7 @@ const rawNotifications = [
   },
   {
     id: '4', type: 'order',
-    title: 'Payment confirmed — $35.25',
+    title: 'Payment confirmed — UGX 35,250',
     subtitle: 'Order #162432 · Visa ****4536',
     time: 'Yesterday', read: true,
     image: null,

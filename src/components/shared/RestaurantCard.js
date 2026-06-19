@@ -28,7 +28,7 @@ export default function RestaurantCard({ restaurant, onPress }) {
             <View style={styles.metaItem}>
               <Ionicons name="bicycle-outline" size={14} color={c.primary} />
               <Text variant="caption" style={{ color: c.textSecondary, fontSize: 12 }}>
-                {restaurant.freeDelivery ? 'Free' : `$${restaurant.deliveryFee}`}
+                {restaurant.freeDelivery ? 'Free' : `UGX ${restaurant.deliveryFee.toLocaleString('en-UG')}`}
               </Text>
             </View>
             <View style={styles.metaItem}>

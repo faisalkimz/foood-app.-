@@ -90,7 +90,7 @@ export default function EditItemScreen() {
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>PRICE ($)</Text>
+            <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>PRICE (UGX)</Text>
             <TextInput
               style={[styles.input, { backgroundColor: c.backgroundSecondary, borderColor: c.border, color: c.text }]}
               value={price}

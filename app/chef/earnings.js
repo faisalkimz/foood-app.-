@@ -32,17 +32,17 @@ export default function EarningsScreen() {
         <View style={styles.revenueCards}>
           <View style={[styles.revenueCard, { backgroundColor: c.primary }]}>
             <Text variant="caption" style={styles.revLabel}>Today</Text>
-            <Text variant="h1" style={styles.revAmount}>${chefStats.todayRevenue}</Text>
+            <Text variant="h1" style={styles.revAmount}>UGX {chefStats.todayRevenue}</Text>
             <Text variant="caption" style={styles.revSub}>{chefStats.todayOrders} orders</Text>
           </View>
           <View style={styles.revenueRow}>
             <View style={[styles.revenueCardSmall, { backgroundColor: c.backgroundSecondary }]}>
               <Text variant="caption" style={{ color: c.textMuted }}>This Week</Text>
-              <Text variant="h3" style={{ color: c.text, fontWeight: '800' }}>${chefStats.weekRevenue}</Text>
+              <Text variant="h3" style={{ color: c.text, fontWeight: '800' }}>UGX {chefStats.weekRevenue}</Text>
             </View>
             <View style={[styles.revenueCardSmall, { backgroundColor: c.backgroundSecondary }]}>
               <Text variant="caption" style={{ color: c.textMuted }}>This Month</Text>
-              <Text variant="h3" style={{ color: c.text, fontWeight: '800' }}>${chefStats.monthRevenue}</Text>
+              <Text variant="h3" style={{ color: c.text, fontWeight: '800' }}>UGX {chefStats.monthRevenue}</Text>
             </View>
           </View>
         </View>
@@ -80,7 +80,7 @@ export default function EarningsScreen() {
                 </View>
               </View>
               <Text variant="body" style={[styles.payoutAmount, { color: c.text }]}>
-                ${day.amount.toFixed(2)}
+                UGX {day.amount.toFixed(2)}
               </Text>
             </View>
           ))}

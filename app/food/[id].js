@@ -72,7 +72,7 @@ export default function FoodDetailScreen() {
       // Success! Show confirmation
       Alert.alert(
         '✅ Added to Cart!',
-        `${quantity}x ${item.name} — $${totalPrice}`,
+        `${quantity}x ${item.name} — UGX ${totalPrice}`,
         [
           { text: 'Continue Shopping', style: 'cancel', onPress: () => router.back() },
           { text: 'Go to Cart', onPress: () => router.push('/(tabs)/cart') },
@@ -149,7 +149,7 @@ export default function FoodDetailScreen() {
 
       {/* Bottom bar */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background, borderTopColor: c.borderLight }]}>
-        <Text variant="h2" style={[styles.totalPrice, { color: c.text }]}>${totalPrice}</Text>
+        <Text variant="h2" style={[styles.totalPrice, { color: c.text }]}>UGX {totalPrice}</Text>
 
         <View style={styles.quantityRow}>
           <Pressable style={styles.qtyBtn} onPress={() => setQuantity(Math.max(1, quantity - 1))}>

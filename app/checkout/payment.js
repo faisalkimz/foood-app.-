@@ -329,7 +329,7 @@ export default function PaymentScreen() {
         {/* Total */}
         <View style={styles.totalSection}>
           <Text variant="caption" style={styles.totalLabel}>TOTAL:</Text>
-          <Text variant="h1" style={styles.totalPrice}>${total}</Text>
+          <Text variant="h1" style={styles.totalPrice}>UGX {total}</Text>
         </View>
       </ScrollView>
 

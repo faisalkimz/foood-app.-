@@ -128,12 +128,12 @@ export default function ChefOrderDetailScreen() {
                 </View>
                 <Text variant="body" style={{ color: c.text, fontWeight: '500' }}>{item.name}</Text>
               </View>
-              <Text variant="body" style={{ color: c.text, fontWeight: '700' }}>${item.price}</Text>
+              <Text variant="body" style={{ color: c.text, fontWeight: '700' }}>UGX {item.price}</Text>
             </View>
           ))}
           <View style={[styles.totalRow, { borderTopColor: c.border }]}>
             <Text variant="h3" style={{ color: c.text }}>Total</Text>
-            <Text variant="h3" style={{ color: c.primary }}>${order.total}</Text>
+            <Text variant="h3" style={{ color: c.primary }}>UGX {order.total}</Text>
           </View>
         </View>
 

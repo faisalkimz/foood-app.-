@@ -148,7 +148,7 @@ export default function OrdersScreen() {
                 <Text variant="body" style={[styles.restaurantName, { color: c.text }]} numberOfLines={1}>
                   {item.restaurant}
                 </Text>
-                <Text variant="h3" style={[styles.orderPrice, { color: c.primary }]}>${item.total}</Text>
+                <Text variant="h3" style={[styles.orderPrice, { color: c.primary }]}>UGX {item.total}</Text>
                 <Text variant="caption" style={{ color: c.textMuted }}>
                   {item.date} · {item.itemCount}
                 </Text>

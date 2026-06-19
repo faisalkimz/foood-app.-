@@ -82,7 +82,7 @@ export default function ChefMenuScreen() {
               <Text variant="caption" style={{ color: c.textMuted }}>{item.category}</Text>
               <View style={styles.menuBottom}>
                 <Text variant="body" style={[styles.menuPrice, { color: c.primary }]}>
-                  ${item.price}
+                  UGX {item.price}
                 </Text>
                 <Switch
                   value={item.available}

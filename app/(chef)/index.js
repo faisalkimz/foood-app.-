@@ -56,7 +56,7 @@ export default function ChefDashboard() {
             <View style={[styles.statIcon, { backgroundColor: '#F0FDF4' }]}>
               <Ionicons name="cash" size={20} color="#10B981" />
             </View>
-            <Text variant="h2" style={[styles.statValue, { color: c.text }]}>${chefStats.todayRevenue}</Text>
+            <Text variant="h2" style={[styles.statValue, { color: c.text }]}>UGX {chefStats.todayRevenue}</Text>
             <Text variant="caption" style={{ color: c.textMuted }}>Revenue</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: c.backgroundSecondary }]}>
@@ -117,7 +117,7 @@ export default function ChefDashboard() {
                 <Text variant="caption" style={{ color: c.textMuted }}>{order.time}</Text>
               </View>
               <View style={styles.orderRight}>
-                <Text variant="body" style={[styles.orderTotal, { color: c.text }]}>${order.total}</Text>
+                <Text variant="body" style={[styles.orderTotal, { color: c.text }]}>UGX {order.total}</Text>
                 <View style={[styles.statusPill, { backgroundColor: STATUS_COLORS[order.status] + '20' }]}>
                   <Text variant="caption" style={{ color: STATUS_COLORS[order.status], fontWeight: '700', fontSize: 11 }}>
                     {order.status === 'new' ? 'New' : order.status === 'preparing' ? 'Preparing' : 'Done'}

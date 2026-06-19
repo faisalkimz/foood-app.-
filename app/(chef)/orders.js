@@ -61,14 +61,14 @@ export default function ChefOrdersScreen() {
           <Text variant="body" style={[styles.customerName, { color: c.text }]}>{item.customer}</Text>
           <Text variant="caption" style={{ color: c.textMuted }}>{item.time} · {item.address}</Text>
         </View>
-        <Text variant="h3" style={[styles.total, { color: c.primary }]}>${item.total}</Text>
+        <Text variant="h3" style={[styles.total, { color: c.primary }]}>UGX {item.total}</Text>
       </View>
 
       {/* Items */}
       <View style={[styles.itemsList, { borderTopColor: c.borderLight }]}>
         {item.items.map((i, idx) => (
           <Text key={idx} variant="bodySmall" style={{ color: c.textSecondary }}>
-            {i.qty}x {i.name} — ${i.price}
+            {i.qty}x {i.name} — UGX {i.price}
           </Text>
         ))}
         {item.note ? (

@@ -3,7 +3,7 @@ import { View, FlatList, StyleSheet, Image, Pressable, ScrollView, Alert } from 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Card } from '../../src/components/ui';
+import { Text } from '../../src/components/ui';
 import { restaurants, menuItems, categories } from '../../src/services/mock/data';
 import { useCartStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
@@ -77,7 +77,7 @@ export default function RestaurantScreen() {
             <View style={styles.metaItem}>
               <Ionicons name="bicycle-outline" size={16} color={c.primary} />
               <Text variant="bodySmall" style={[styles.metaValue, { color: c.text }]}>
-                {restaurant.freeDelivery ? 'Free' : `$${restaurant.deliveryFee}`}
+                {restaurant.freeDelivery ? 'Free' : `UGX ${restaurant.deliveryFee.toLocaleString('en-UG')}`}
               </Text>
             </View>
             <View style={styles.metaItem}>
@@ -128,7 +128,7 @@ export default function RestaurantScreen() {
                     {item.restaurant || restaurant.name}
                   </Text>
                   <Text variant="body" style={[styles.menuPrice, { color: c.primary }]}>
-                    ${item.price}
+                    UGX {item.price}
                   </Text>
                 </View>
                 <Pressable
