@@ -15,19 +15,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
 
   const handleLogin = () => {
+    // Role will be determined by backend
     login(
       { id: '1', name: 'Guest User', email: email || 'guest@foodorder.com' },
       'customer'
     );
     router.replace('/(auth)/location');
-  };
-
-  const handleChefLogin = () => {
-    login(
-      { id: '2', name: 'Chef User', email: email || 'chef@foodorder.com' },
-      'chef'
-    );
-    router.replace('/(chef)');
   };
 
   return (
@@ -82,11 +75,6 @@ export default function LoginScreen() {
 
           <Pressable style={styles.loginButton} onPress={handleLogin}>
             <Text variant="body" style={styles.loginButtonText}>LOG IN</Text>
-          </Pressable>
-
-          <Pressable style={[styles.loginButton, styles.chefButton]} onPress={handleChefLogin}>
-            <Ionicons name="restaurant" size={18} color="#FFF" style={{ marginRight: 6 }} />
-            <Text variant="body" style={styles.loginButtonText}>LOGIN AS CHEF</Text>
           </Pressable>
         </View>
 
@@ -177,12 +165,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
     marginTop: spacing.sm,
-  },
-  chefButton: {
-    backgroundColor: '#22C55E',
-    marginTop: spacing.xs,
   },
   loginButtonText: {
     color: colors.textInverse,
