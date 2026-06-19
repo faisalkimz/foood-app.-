@@ -23,6 +23,7 @@ function AppStack() {
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" options={{ gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="(chef)" options={{ gestureEnabled: false }} />
         <Stack.Screen name="restaurant/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="food/[id]" options={{ presentation: 'modal' }} />
         <Stack.Screen name="checkout/index" />
@@ -42,6 +43,12 @@ function AppStack() {
         <Stack.Screen name="profile/faqs" />
         <Stack.Screen name="profile/reviews" />
         <Stack.Screen name="profile/settings" />
+        {/* Chef sub-screens */}
+        <Stack.Screen name="chef/add-item" />
+        <Stack.Screen name="chef/edit-item" />
+        <Stack.Screen name="chef/order-detail" />
+        <Stack.Screen name="chef/restaurant-info" />
+        <Stack.Screen name="chef/earnings" />
       </Stack>
     </>
   );

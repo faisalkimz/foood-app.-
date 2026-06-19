@@ -13,10 +13,18 @@ export default function LoginScreen() {
   const login = useAuthStore((s) => s.login);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('customer'); // 'customer' | 'chef'
 
   const handleLogin = () => {
-    login({ id: '1', name: 'Guest User', email: email || 'guest@foodorder.com' });
-    router.replace('/(auth)/location');
+    login(
+      { id: '1', name: role === 'chef' ? 'Chef User' : 'Guest User', email: email || 'guest@foodorder.com' },
+      role
+    );
+    if (role === 'chef') {
+      router.replace('/(chef)');
+    } else {
+      router.replace('/(auth)/location');
+    }
   };
 
   return (
@@ -41,6 +49,23 @@ export default function LoginScreen() {
       >
         {/* Form */}
         <View style={styles.form}>
+          {/* Role toggle */}
+          <View style={styles.roleRow}>
+            <Pressable
+              style={[styles.rolePill, role === 'customer' && styles.rolePillActive]}
+              onPress={() => setRole('customer')}
+            >
+              <Ionicons name="person" size={16} color={role === 'customer' ? colors.textInverse : colors.primary} />
+              <Text variant="bodySmall" style={[styles.roleText, role === 'customer' && styles.roleTextActive]}>Customer</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.rolePill, role === 'chef' && styles.rolePillActive]}
+              onPress={() => setRole('chef')}
+            >
+              <Ionicons name="restaurant" size={16} color={role === 'chef' ? colors.textInverse : colors.primary} />
+              <Text variant="bodySmall" style={[styles.roleText, role === 'chef' && styles.roleTextActive]}>Chef</Text>
+            </Pressable>
+          </View>
           <View style={styles.inputGroup}>
             <Text variant="label" style={styles.inputLabel}>EMAIL</Text>
             <Input
@@ -136,6 +161,35 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: spacing.lg,
+  },
+  roleRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  rolePill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: 'transparent',
+  },
+  rolePillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  roleText: {
+    fontWeight: '700',
+    color: colors.primary,
+    fontSize: 14,
+  },
+  roleTextActive: {
+    color: colors.textInverse,
   },
   inputGroup: {
     gap: spacing.xs,

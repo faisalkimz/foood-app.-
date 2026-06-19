@@ -192,3 +192,119 @@ export const offers = [
     color: '#FFB800',
   },
 ];
+
+// ── Chef / Restaurant Side ──────────────────────────────────
+
+export const chefStats = {
+  todayOrders: 24,
+  todayRevenue: 1250.75,
+  activeOrders: 5,
+  avgRating: 4.8,
+  weekRevenue: 8420.50,
+  monthRevenue: 32150.00,
+};
+
+export const chefOrders = [
+  // New (pending)
+  {
+    id: 'co1', status: 'new', customer: 'Sarah Johnson',
+    customerImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
+    items: [
+      { name: 'Margherita Pizza', qty: 2, price: 12.99 },
+      { name: 'Garlic Bread', qty: 1, price: 4.50 },
+    ],
+    total: 30.48, time: '2 min ago', address: '3466 Royal Ln. Mesa',
+    note: 'Extra cheese on pizza please',
+  },
+  {
+    id: 'co2', status: 'new', customer: 'Mike Davis',
+    customerImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+    items: [
+      { name: 'Double Burger', qty: 1, price: 14.99 },
+      { name: 'Fries', qty: 2, price: 3.99 },
+    ],
+    total: 22.97, time: '5 min ago', address: '1847 Elm St. Richardson',
+    note: '',
+  },
+  {
+    id: 'co3', status: 'new', customer: 'Emily Chen',
+    customerImage: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100',
+    items: [
+      { name: 'Caesar Salad', qty: 1, price: 9.99 },
+      { name: 'Lemonade', qty: 2, price: 2.99 },
+    ],
+    total: 15.97, time: '8 min ago', address: '921 Oak Ave. Jersey',
+    note: 'No croutons',
+  },
+  // Preparing
+  {
+    id: 'co4', status: 'preparing', customer: 'James Wilson',
+    customerImage: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100',
+    items: [
+      { name: 'BBQ Chicken Wings', qty: 3, price: 11.99 },
+      { name: 'Coleslaw', qty: 1, price: 3.50 },
+    ],
+    total: 39.47, time: '15 min ago', address: '4521 Pine Rd. Mesa',
+    note: 'Extra sauce on the side',
+  },
+  {
+    id: 'co5', status: 'preparing', customer: 'Lisa Anderson',
+    customerImage: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100',
+    items: [
+      { name: 'Pepperoni Pizza', qty: 1, price: 14.99 },
+    ],
+    total: 14.99, time: '20 min ago', address: '789 Maple Dr. Syracuse',
+    note: '',
+  },
+  // Completed
+  {
+    id: 'co6', status: 'completed', customer: 'Robert Fox',
+    customerImage: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
+    items: [
+      { name: 'Spaghetti Bolognese', qty: 2, price: 13.99 },
+      { name: 'Tiramisu', qty: 1, price: 6.99 },
+    ],
+    total: 34.97, time: '1h ago', address: '2118 Thornridge Cir.',
+    note: '',
+  },
+  {
+    id: 'co7', status: 'completed', customer: 'Anna Smith',
+    customerImage: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100',
+    items: [
+      { name: 'Chicken Tikka', qty: 1, price: 12.50 },
+      { name: 'Naan Bread', qty: 2, price: 2.50 },
+    ],
+    total: 17.50, time: '2h ago', address: '3891 Ranchview Dr.',
+    note: 'Mild spice',
+  },
+  {
+    id: 'co8', status: 'completed', customer: 'Tom Brown',
+    customerImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100',
+    items: [
+      { name: 'Fish & Chips', qty: 1, price: 11.99 },
+    ],
+    total: 11.99, time: '3h ago', address: '5678 Cedar Blvd.',
+    note: '',
+  },
+];
+
+export const chefMenuItems = [
+  { id: 'm1', name: 'Margherita Pizza', price: 12.99, category: 'Pizza', available: true, image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=300' },
+  { id: 'm2', name: 'Pepperoni Pizza', price: 14.99, category: 'Pizza', available: true, image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=300' },
+  { id: 'm3', name: 'Double Burger', price: 14.99, category: 'Burger', available: true, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300' },
+  { id: 'm4', name: 'Caesar Salad', price: 9.99, category: 'Salad', available: false, image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300' },
+  { id: 'm5', name: 'BBQ Chicken Wings', price: 11.99, category: 'Chicken', available: true, image: 'https://images.unsplash.com/photo-1527477396000-e27163b4bdb5?w=300' },
+  { id: 'm6', name: 'Garlic Bread', price: 4.50, category: 'Sides', available: true, image: 'https://images.unsplash.com/photo-1619535860434-ba1d8fa12536?w=300' },
+  { id: 'm7', name: 'Fish & Chips', price: 11.99, category: 'Seafood', available: true, image: 'https://images.unsplash.com/photo-1579208030886-b1715a638e6c?w=300' },
+  { id: 'm8', name: 'Tiramisu', price: 6.99, category: 'Dessert', available: true, image: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=300' },
+];
+
+export const earningsHistory = [
+  { id: 'e1', label: 'Today', amount: 1250.75, orders: 24 },
+  { id: 'e2', label: 'Yesterday', amount: 980.50, orders: 18 },
+  { id: 'e3', label: 'Mon', amount: 1120.00, orders: 21 },
+  { id: 'e4', label: 'Sun', amount: 1450.25, orders: 28 },
+  { id: 'e5', label: 'Sat', amount: 1680.00, orders: 32 },
+  { id: 'e6', label: 'Fri', amount: 1340.75, orders: 26 },
+  { id: 'e7', label: 'Thu', amount: 890.00, orders: 16 },
+];
