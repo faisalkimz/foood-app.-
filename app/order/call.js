@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Pressable, Image, Animated, ImageBackground, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Image, Animated, ImageBackground, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -84,7 +84,7 @@ export default function CallingScreen() {
               <Text style={styles.actionLabel}>{isMuted ? 'unmute' : 'mute'}</Text>
             </Pressable>
 
-            <Pressable style={styles.actionItem}>
+            <Pressable style={styles.actionItem} onPress={() => Alert.alert('Keypad', 'Keypad not available during in-app calls')}>
               <View style={styles.actionCircle}>
                 <Ionicons name="keypad" size={26} color="#FFF" />
               </View>
@@ -100,21 +100,21 @@ export default function CallingScreen() {
           </View>
 
           <View style={styles.actionRow}>
-            <Pressable style={styles.actionItem}>
+            <Pressable style={styles.actionItem} onPress={() => Alert.alert('Add Call', 'Conference calls not supported')}>
               <View style={styles.actionCircle}>
                 <Ionicons name="add" size={26} color="#FFF" />
               </View>
               <Text style={styles.actionLabel}>add call</Text>
             </Pressable>
 
-            <Pressable style={styles.actionItem}>
+            <Pressable style={styles.actionItem} onPress={() => Alert.alert('Video', 'Video calls coming soon')}>
               <View style={styles.actionCircle}>
                 <Ionicons name="videocam" size={26} color="#FFF" />
               </View>
               <Text style={styles.actionLabel}>FaceTime</Text>
             </Pressable>
 
-            <Pressable style={styles.actionItem}>
+            <Pressable style={styles.actionItem} onPress={() => Alert.alert('Contacts', 'Not available during calls')}>
               <View style={styles.actionCircle}>
                 <Ionicons name="person" size={26} color="#FFF" />
               </View>

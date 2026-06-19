@@ -45,7 +45,7 @@ export default function AddItemScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Image placeholder */}
-        <Pressable style={[styles.imagePicker, { backgroundColor: c.backgroundSecondary, borderColor: c.border }]}>
+        <Pressable style={[styles.imagePicker, { backgroundColor: c.backgroundSecondary, borderColor: c.border }]} onPress={() => Alert.alert('📸 Photo', 'Camera and gallery will be available once connected to backend')}>
           <Ionicons name="camera" size={32} color={c.textMuted} />
           <Text variant="bodySmall" style={{ color: c.textMuted }}>Tap to add photo</Text>
         </Pressable>

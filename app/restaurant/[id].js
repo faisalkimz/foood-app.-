@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, FlatList, StyleSheet, Image, Pressable, ScrollView, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,6 +34,7 @@ export default function RestaurantScreen() {
 
   // Filter tags from cuisine string
   const tags = restaurant.cuisine.split(' · ').map((t) => t.trim());
+  const [selectedTag, setSelectedTag] = useState(0);
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
@@ -90,11 +92,12 @@ export default function RestaurantScreen() {
               {tags.map((tag, idx) => (
                 <Pressable
                   key={idx}
-                  style={[styles.tag, { backgroundColor: c.backgroundSecondary, borderColor: c.border }, idx === 0 && { backgroundColor: c.primary, borderColor: c.primary }]}
+                  style={[styles.tag, { backgroundColor: c.backgroundSecondary, borderColor: c.border }, idx === selectedTag && { backgroundColor: c.primary, borderColor: c.primary }]}
+                  onPress={() => setSelectedTag(idx)}
                 >
                   <Text
                     variant="caption"
-                    style={[styles.tagText, { color: c.textSecondary }, idx === 0 && { color: '#FFF' }]}
+                    style={[styles.tagText, { color: c.textSecondary }, idx === selectedTag && { color: '#FFF' }]}
                   >
                     {tag}
                   </Text>
@@ -107,7 +110,7 @@ export default function RestaurantScreen() {
         {/* Menu items */}
         <View style={styles.menuSection}>
           <Text variant="h3" style={[styles.menuTitle, { color: c.text }]}>
-            {tags[0] || 'Menu'} ({menu.length})
+            {tags[selectedTag] || 'Menu'} ({menu.length})
           </Text>
           <View style={styles.menuGrid}>
             {menu.map((item) => (

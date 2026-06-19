@@ -41,7 +41,7 @@ export default function RestaurantInfoScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Cover image */}
-        <Pressable style={[styles.coverWrap, { backgroundColor: c.backgroundSecondary }]}>
+        <Pressable style={[styles.coverWrap, { backgroundColor: c.backgroundSecondary }]} onPress={() => Alert.alert('📸 Cover Photo', 'Photo picker will be available once connected to backend')}>
           <Image
             source={{ uri: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600' }}
             style={styles.coverImage}
