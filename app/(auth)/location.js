@@ -1,16 +1,80 @@
-import { View, StyleSheet, Image, Pressable, Platform } from 'react-native';
+import { useState } from 'react';
+import { View, StyleSheet, Image, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { Text } from '../../src/components/ui';
 import { colors, spacing, radius } from '../../src/theme';
+import { useLocationStore } from '../../src/store/locationStore';
 
 export default function LocationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const setLocation = useLocationStore((s) => s.setLocation);
+  const [detecting, setDetecting] = useState(false);
 
-  const handleAccessLocation = () => {
-    // In a real app, request location permission here
+  const handleAccessLocation = async () => {
+    setDetecting(true);
+    try {
+      // 1. Request permission
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Denied',
+          'We need location access to find restaurants near you. You can enable it later in Settings.',
+          [
+            { text: 'Skip', onPress: () => handleSkip() },
+            { text: 'Try Again', onPress: () => handleAccessLocation() },
+          ]
+        );
+        setDetecting(false);
+        return;
+      }
+
+      // 2. Get current position
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const { latitude, longitude } = position.coords;
+
+      // 3. Reverse geocode to get address
+      const [geo] = await Location.reverseGeocodeAsync({ latitude, longitude });
+
+      const address = {
+        name: geo?.name || geo?.street || 'My Location',
+        street: geo?.street || '',
+        city: geo?.city || geo?.subregion || '',
+        region: geo?.region || '',
+        country: geo?.country || '',
+        postalCode: geo?.postalCode || '',
+      };
+
+      // 4. Save to store + AsyncStorage
+      await setLocation(address, { latitude, longitude });
+
+      // 5. Navigate to home
+      router.replace('/(tabs)');
+    } catch (err) {
+      Alert.alert(
+        'Location Error',
+        'Could not detect your location. Please try again or enter it manually.',
+        [
+          { text: 'Skip', onPress: () => handleSkip() },
+          { text: 'Retry', onPress: () => handleAccessLocation() },
+        ]
+      );
+    } finally {
+      setDetecting(false);
+    }
+  };
+
+  const handleSkip = async () => {
+    // Set a default location so the app still works
+    await setLocation(
+      { name: 'Location not set', street: '', city: '', region: '', country: '', postalCode: '' },
+      null
+    );
     router.replace('/(tabs)');
   };
 
@@ -27,15 +91,37 @@ export default function LocationScreen() {
 
       {/* Bottom content */}
       <View style={styles.bottomContent}>
-        <Pressable style={styles.locationBtn} onPress={handleAccessLocation}>
-          <Text variant="body" style={styles.locationBtnText}>ACCESS LOCATION</Text>
-          <View style={styles.locationIcon}>
-            <Ionicons name="navigate" size={18} color={colors.primary} />
-          </View>
+        <Text variant="h2" style={styles.title}>Find Restaurants Near You</Text>
+        <Text variant="bodySmall" style={styles.subtitle}>
+          Allow location access so we can show you the best food options in your area.
+        </Text>
+
+        <Pressable
+          style={[styles.locationBtn, detecting && styles.locationBtnDisabled]}
+          onPress={handleAccessLocation}
+          disabled={detecting}
+        >
+          {detecting ? (
+            <>
+              <ActivityIndicator color={colors.textInverse} size="small" />
+              <Text variant="body" style={styles.locationBtnText}>DETECTING LOCATION...</Text>
+            </>
+          ) : (
+            <>
+              <Text variant="body" style={styles.locationBtnText}>ACCESS LOCATION</Text>
+              <View style={styles.locationIcon}>
+                <Ionicons name="navigate" size={18} color={colors.primary} />
+              </View>
+            </>
+          )}
+        </Pressable>
+
+        <Pressable onPress={handleSkip} hitSlop={12}>
+          <Text variant="bodySmall" style={styles.skipText}>Skip for now</Text>
         </Pressable>
 
         <Text variant="caption" style={styles.disclaimer}>
-          DFOOD WILL ACCESS YOUR LOCATION{'\n'}ONLY WHILE USING THE APP
+          FOODORDER WILL ACCESS YOUR LOCATION{'\n'}ONLY WHILE USING THE APP
         </Text>
       </View>
     </View>
@@ -61,7 +147,19 @@ const styles = StyleSheet.create({
   bottomContent: {
     paddingHorizontal: spacing.xl,
     alignItems: 'center',
-    gap: spacing.lg,
+    gap: spacing.md,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  subtitle: {
+    textAlign: 'center',
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: spacing.sm,
   },
   locationBtn: {
     flexDirection: 'row',
@@ -74,6 +172,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     width: '100%',
   },
+  locationBtnDisabled: { opacity: 0.7 },
   locationBtnText: {
     color: colors.textInverse,
     fontWeight: '700',
@@ -87,6 +186,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.textInverse,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  skipText: {
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 14,
   },
   disclaimer: {
     textAlign: 'center',

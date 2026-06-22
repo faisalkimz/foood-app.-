@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
 import { SearchBar, RestaurantCard } from '../../src/components/shared';
-import { useAuthStore } from '../../src/store';
+import { useAuthStore, useLocationStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
 import { categories, restaurants } from '../../src/services/mock/data';
 import { spacing, radius } from '../../src/theme';
@@ -14,6 +14,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
+  const address = useLocationStore((s) => s.address);
   const c = useTheme();
   const [selectedCategory, setSelectedCategory] = useState('1');
 
@@ -22,6 +23,15 @@ export default function HomeScreen() {
     selectedCatName === 'All'
       ? restaurants
       : restaurants.filter((r) => r.cuisine.toLowerCase().includes(selectedCatName.toLowerCase()));
+
+  // Build display address
+  const displayAddress = address?.name || address?.street || 'Set your location';
+  const displayCity = [address?.city, address?.region].filter(Boolean).join(', ');
+
+  // Greeting based on time of day
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good Morning!' : hour < 17 ? 'Good Afternoon!' : 'Good Evening!';
+  const firstName = user?.full_name?.split(' ')[0] || user?.name?.split(' ')[0] || 'there';
 
   return (
     <ScrollView
@@ -36,11 +46,18 @@ export default function HomeScreen() {
             <Text variant="caption" style={[styles.deliverLabel, { color: c.primary }]}>DELIVER TO</Text>
             <Ionicons name="chevron-down" size={14} color={c.primary} />
           </Pressable>
-          <Text variant="body" style={[styles.address, { color: c.text }]}>Halal Lab office</Text>
+          <Text variant="body" style={[styles.address, { color: c.text }]} numberOfLines={1}>
+            {displayAddress}
+          </Text>
+          {displayCity ? (
+            <Text variant="caption" style={{ color: c.textMuted, fontSize: 11, marginTop: 1 }}>
+              {displayCity}
+            </Text>
+          ) : null}
         </View>
         <Pressable style={[styles.avatarBtn, { borderColor: c.primary }]} onPress={() => router.push('/(tabs)/profile')}>
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' }}
+            source={{ uri: user?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' }}
             style={styles.avatar}
           />
         </Pressable>
@@ -49,8 +66,8 @@ export default function HomeScreen() {
       {/* Greeting */}
       <View style={styles.section}>
         <Text variant="body" style={[styles.greetingLight, { color: c.textSecondary }]}>
-          Hey {user?.name?.split(' ')[0] || 'Halal'},{' '}
-          <Text variant="h2" style={[styles.greetingBold, { color: c.text }]}>Good Afternoon!</Text>
+          Hey {firstName},{' '}
+          <Text variant="h2" style={[styles.greetingBold, { color: c.text }]}>{greeting}</Text>
         </Text>
       </View>
 

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import {
   View, StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, Pressable, Alert,
+  ScrollView, Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Input } from '../../src/components/ui';
+import { Text, Input, showToast } from '../../src/components/ui';
 import { colors, spacing, radius } from '../../src/theme';
 import { signInWithOTP } from '../../src/services/authService';
 
@@ -18,17 +18,17 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     const trimmed = email.trim().toLowerCase();
-    if (!trimmed) return Alert.alert('Error', 'Please enter your email address.');
+    if (!trimmed) return showToast({ type: 'warning', title: 'Missing Email', message: 'Please enter your email address.' });
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmed)) return Alert.alert('Error', 'Please enter a valid email address.');
+    if (!emailRegex.test(trimmed)) return showToast({ type: 'warning', title: 'Invalid Email', message: 'Please enter a valid email address.' });
 
     setLoading(true);
     try {
       await signInWithOTP(trimmed);
       router.push({ pathname: '/(auth)/verification', params: { email: trimmed, mode: 'login' } });
     } catch (err) {
-      Alert.alert('Error', err.message || 'Failed to send OTP. Please try again.');
+      showToast({ type: 'error', title: 'Sign In Failed', message: err.message || 'Could not send code. Please try again.' });
     } finally {
       setLoading(false);
     }

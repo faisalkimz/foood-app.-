@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import {
   View, StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, Pressable, Alert,
+  ScrollView, Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Input } from '../../src/components/ui';
+import { Text, Input, showToast } from '../../src/components/ui';
 import { colors, spacing, radius } from '../../src/theme';
 import { signUpWithOTP } from '../../src/services/authService';
 
@@ -23,11 +23,11 @@ export default function SignupScreen() {
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPhone = phone.trim();
 
-    if (!trimmedName) return Alert.alert('Error', 'Please enter your full name.');
-    if (!trimmedEmail) return Alert.alert('Error', 'Please enter your email address.');
+    if (!trimmedName) return showToast({ type: 'warning', title: 'Missing Name', message: 'Please enter your full name.' });
+    if (!trimmedEmail) return showToast({ type: 'warning', title: 'Missing Email', message: 'Please enter your email address.' });
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) return Alert.alert('Error', 'Please enter a valid email address.');
+    if (!emailRegex.test(trimmedEmail)) return showToast({ type: 'warning', title: 'Invalid Email', message: 'Please enter a valid email address.' });
 
     setLoading(true);
     try {
@@ -43,13 +43,9 @@ export default function SignupScreen() {
       });
     } catch (err) {
       if (err.message?.toLowerCase().includes('already registered')) {
-        Alert.alert(
-          'Account Exists',
-          'An account with this email already exists. Please log in instead.',
-          [{ text: 'Log In', onPress: () => router.replace('/(auth)/login') }, { text: 'Cancel' }]
-        );
+        showToast({ type: 'info', title: 'Account Exists', message: 'This email is already registered. Try logging in instead.' });
       } else {
-        Alert.alert('Error', err.message || 'Failed to sign up. Please try again.');
+        showToast({ type: 'error', title: 'Sign Up Failed', message: err.message || 'Could not create account. Please try again.' });
       }
     } finally {
       setLoading(false);

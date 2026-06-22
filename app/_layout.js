@@ -5,8 +5,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { ThemeProvider, useTheme } from '../src/providers/ThemeProvider';
+import { ToastProvider } from '../src/components/ui';
 import { useThemeStore } from '../src/store';
 import { useAuthStore } from '../src/store/authStore';
+import { useLocationStore } from '../src/store/locationStore';
 import { supabase } from '../src/services/supabase';
 import { getProfile } from '../src/services/authService';
 
@@ -14,10 +16,12 @@ function AppStack() {
   const c = useTheme();
   const isDark = useThemeStore((s) => s.isDark);
   const { initialize, login, logout, isLoading } = useAuthStore();
+  const initializeLocation = useLocationStore((s) => s.initialize);
 
   useEffect(() => {
-    // Restore session from AsyncStorage on app start
+    // Restore session + saved location from AsyncStorage on app start
     initialize();
+    initializeLocation();
 
     // Listen for Supabase auth state changes (login / logout / token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -96,7 +100,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <AppStack />
+          <ToastProvider>
+            <AppStack />
+          </ToastProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

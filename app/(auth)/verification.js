@@ -1,12 +1,13 @@
 import { useState, useRef } from 'react';
 import {
   View, StyleSheet, TextInput, Pressable,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
+import { showToast } from '../../src/components/ui';
 import { colors, spacing, radius } from '../../src/theme';
 import { verifyOTP, signInWithOTP, signUpWithOTP, getProfile, updateProfile } from '../../src/services/authService';
 import { useAuthStore } from '../../src/store/authStore';
@@ -101,12 +102,13 @@ export default function VerificationScreen() {
         router.replace(mode === 'signup' ? '/(auth)/location' : '/(tabs)');
       }
     } catch (err) {
-      Alert.alert(
-        'Invalid Code',
-        err.message?.includes('expired')
+      showToast({
+        type: 'error',
+        title: 'Invalid Code',
+        message: err.message?.includes('expired')
           ? 'This code has expired. Please request a new one.'
           : err.message || 'The code you entered is incorrect. Please try again.',
-      );
+      });
       setCode(Array(CODE_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
     } finally {
@@ -124,9 +126,9 @@ export default function VerificationScreen() {
       }
       setCode(Array(CODE_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
-      Alert.alert('Code Sent', `A new verification code has been sent to ${email}`);
+      showToast({ type: 'success', title: 'Code Sent!', message: `A new verification code was sent to ${email}` });
     } catch (err) {
-      Alert.alert('Error', err.message || 'Failed to resend code.');
+      showToast({ type: 'error', title: 'Resend Failed', message: err.message || 'Could not resend code. Please try again.' });
     } finally {
       setResending(false);
     }
