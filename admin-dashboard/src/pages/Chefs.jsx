@@ -1,12 +1,36 @@
-import { useState } from 'react';
-import { chefs as initialChefs } from '../data';
+import { useState, useEffect, useCallback } from 'react';
+import { adminApi } from '../services/api';
 import { Icons } from '../components/Icons';
 
-export default function Chefs({ searchQuery }) {
-  const [chefList, setChefList] = useState(initialChefs);
+export default function Chefs({ searchQuery, token }) {
+  const [chefList, setChefList] = useState([]);
   const [filter, setFilter] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editChef, setEditChef] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
+
+  const loadChefs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { chefs } = await adminApi.getChefs(token);
+      setChefList(chefs);
+    } catch (err) {
+      showToast(err.message || 'Failed to load chefs', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [token, showToast]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadChefs();
+  }, []);
 
   const filtered = chefList.filter((c) => {
     const matchesSearch = !searchQuery ||
@@ -17,34 +41,72 @@ export default function Chefs({ searchQuery }) {
     return matchesSearch && matchesFilter;
   });
 
-  const handleApprove = (id) => setChefList(prev => prev.map(c => c.id === id ? { ...c, status: 'active' } : c));
-  const handleDeactivate = (id) => setChefList(prev => prev.map(c => c.id === id ? { ...c, status: c.status === 'active' ? 'inactive' : 'active' } : c));
-  const handleDelete = (id) => { if (confirm('Remove this chef?')) setChefList(prev => prev.filter(c => c.id !== id)); };
-
-  const handleAddChef = (e) => {
-    e.preventDefault();
-    const form = new FormData(e.target);
-    setChefList(prev => [{
-      id: `c${Date.now()}`, name: form.get('name'), email: form.get('email'), restaurant: form.get('restaurant'),
-      status: 'pending', orders: 0, revenue: 0, rating: 0, joined: new Date().toISOString().split('T')[0],
-      avatar: 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=100', menuItems: 0, avgPrepTime: '—',
-    }, ...prev]);
-    setShowAddModal(false);
+  const handleToggleStatus = async (chef) => {
+    const newStatus = chef.status === 'active' ? 'inactive' : 'active';
+    try {
+      await adminApi.updateChefStatus(token, chef.id, newStatus);
+      setChefList(prev => prev.map(c => c.id === chef.id ? { ...c, status: newStatus } : c));
+      showToast(`Chef ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
+    } catch (err) {
+      showToast(err.message || 'Failed to update chef status', 'error');
+    }
   };
 
-  const handleSaveEdit = (e) => {
+  const handleDelete = async (chef) => {
+    if (!confirm(`Remove ${chef.name}? This will permanently delete their account.`)) return;
+    try {
+      await adminApi.deleteChef(token, chef.id);
+      setChefList(prev => prev.filter(c => c.id !== chef.id));
+      showToast('Chef removed successfully');
+    } catch (err) {
+      showToast(err.message || 'Failed to remove chef', 'error');
+    }
+  };
+
+  const handleAddChef = async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
-    setChefList(prev => prev.map(c =>
-      c.id === editChef.id ? { ...c, name: form.get('name'), email: form.get('email'), restaurant: form.get('restaurant') } : c
-    ));
-    setEditChef(null);
+    const name = form.get('name');
+    const email = form.get('email');
+    const restaurantName = form.get('restaurant');
+    const phone = form.get('phone');
+
+    setSaving(true);
+    try {
+      const { chef } = await adminApi.createChef(token, { name, email, restaurantName, phone });
+      setChefList(prev => [{
+        ...chef,
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=FF6B35&color=fff`,
+        rating: 0, orders: 0, revenue: 0, menuItems: 0, avgPrepTime: '—',
+      }, ...prev]);
+      setShowAddModal(false);
+      e.target.reset();
+      showToast(`✅ Chef account created! ${email} can now log in via the mobile app.`);
+    } catch (err) {
+      showToast(err.message || 'Failed to create chef account', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const pendingCount = chefList.filter(c => c.status === 'pending').length;
 
   return (
     <div>
+      {/* Toast notification */}
+      {toast && (
+        <div className={`toast toast-${toast.type}`} style={{
+          position: 'fixed', top: 24, right: 24, zIndex: 9999,
+          padding: '12px 20px', borderRadius: 10, maxWidth: 380,
+          background: toast.type === 'error' ? '#FEF2F2' : '#F0FDF4',
+          color: toast.type === 'error' ? '#DC2626' : '#16A34A',
+          border: `1px solid ${toast.type === 'error' ? '#FECACA' : '#BBF7D0'}`,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 14, fontWeight: 500,
+        }}>
+          {toast.message}
+        </div>
+      )}
+
       {/* Stats */}
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 16 }}>
         <div className="stat-card">
@@ -65,22 +127,22 @@ export default function Chefs({ searchQuery }) {
           <div className="stat-icon-wrap" style={{ background: '#FFFBEB', color: 'var(--warning)' }}>{Icons.clock()}</div>
           <div className="stat-info">
             <div className="stat-value" style={{ fontSize: 20 }}>{pendingCount}</div>
-            <div className="stat-label">Pending Approval</div>
+            <div className="stat-label">Pending</div>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon-wrap" style={{ background: '#F5F3FF', color: 'var(--purple)' }}>{Icons.plate()}</div>
+          <div className="stat-icon-wrap" style={{ background: '#EFF6FF', color: '#3B82F6' }}>{Icons.plate()}</div>
           <div className="stat-info">
-            <div className="stat-value" style={{ fontSize: 20 }}>{chefList.reduce((sum, c) => sum + c.menuItems, 0)}</div>
-            <div className="stat-label">Menu Items</div>
+            <div className="stat-value" style={{ fontSize: 20 }}>{chefList.filter(c => c.status === 'inactive').length}</div>
+            <div className="stat-label">Inactive</div>
           </div>
         </div>
       </div>
 
       <div className="filter-bar">
-        {['all', 'active', 'pending', 'inactive'].map((f) => (
+        {['all', 'active', 'inactive'].map((f) => (
           <button key={f} className={`filter-pill ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
-            {f === 'all' ? `All (${chefList.length})` : f.charAt(0).toUpperCase() + f.slice(1)}{f === 'pending' && pendingCount > 0 ? ` (${pendingCount})` : ''}
+            {f === 'all' ? `All (${chefList.length})` : f.charAt(0).toUpperCase() + f.slice(1)}
           </button>
         ))}
         <div style={{ flex: 1 }} />
@@ -88,76 +150,102 @@ export default function Chefs({ searchQuery }) {
       </div>
 
       <div className="table-card">
-        <div className="table-header"><h3>Chefs ({filtered.length})</h3></div>
-        <table>
-          <thead>
-            <tr><th>Chef</th><th>Restaurant</th><th>Orders</th><th>Revenue</th><th>Menu Items</th><th>Avg Prep</th><th>Rating</th><th>Status</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {filtered.map((c) => (
-              <tr key={c.id}>
-                <td>
-                  <div className="user-cell">
-                    <img src={c.avatar} alt="" className="user-avatar" />
-                    <div><div className="user-name">{c.name}</div><div className="user-email">{c.email}</div></div>
-                  </div>
-                </td>
-                <td style={{ fontWeight: 500 }}>{c.restaurant}</td>
-                <td>{c.orders}</td>
-                <td style={{ fontWeight: 600 }}>${c.revenue.toLocaleString()}</td>
-                <td>{c.menuItems}</td>
-                <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{c.avgPrepTime}</td>
-                <td style={{ color: 'var(--warning)' }}>{c.rating > 0 ? c.rating : '—'}</td>
-                <td><span className={`badge badge-${c.status}`}>{c.status}</span></td>
-                <td>
-                  <div className="table-actions">
-                    <button className="btn btn-sm" onClick={() => setEditChef(c)}>Edit</button>
-                    {c.status === 'pending' && <button className="btn btn-sm btn-success" onClick={() => handleApprove(c.id)}>Approve</button>}
-                    {c.status !== 'pending' && <button className="btn btn-sm" onClick={() => handleDeactivate(c.id)}>{c.status === 'active' ? 'Deactivate' : 'Activate'}</button>}
-                    <button className="btn btn-sm btn-danger" onClick={() => handleDelete(c.id)}>Remove</button>
-                  </div>
-                </td>
+        <div className="table-header">
+          <h3>Chefs ({filtered.length})</h3>
+          <button className="btn" onClick={loadChefs} style={{ fontSize: 13 }}>↺ Refresh</button>
+        </div>
+
+        {loading ? (
+          <div className="empty-state" style={{ padding: 48 }}>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Loading chefs...</div>
+          </div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Chef</th>
+                <th>Restaurant</th>
+                <th>Cuisine</th>
+                <th>Rating</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Actions</th>
               </tr>
-            ))}
-            {filtered.length === 0 && <tr><td colSpan={9}><div className="empty-state"><p>No chefs found</p></div></td></tr>}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((c) => (
+                <tr key={c.id}>
+                  <td>
+                    <div className="user-cell">
+                      <img src={c.avatar} alt="" className="user-avatar" />
+                      <div>
+                        <div className="user-name">{c.name}</div>
+                        <div className="user-email">{c.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ fontWeight: 500 }}>{c.restaurant}</td>
+                  <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{c.cuisine}</td>
+                  <td style={{ color: 'var(--warning)' }}>{c.rating > 0 ? `⭐ ${c.rating}` : '—'}</td>
+                  <td><span className={`badge badge-${c.status}`}>{c.status}</span></td>
+                  <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{c.joined}</td>
+                  <td>
+                    <div className="table-actions">
+                      <button className="btn btn-sm" onClick={() => handleToggleStatus(c)}>
+                        {c.status === 'active' ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button className="btn btn-sm btn-danger" onClick={() => handleDelete(c)}>Remove</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && !loading && (
+                <tr><td colSpan={7}>
+                  <div className="empty-state">
+                    <p>{searchQuery ? 'No chefs match your search.' : 'No chefs yet. Register one to get started!'}</p>
+                  </div>
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {/* Add Modal */}
+      {/* Add Chef Modal */}
       {showAddModal && (
-        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+        <div className="modal-overlay" onClick={() => !saving && setShowAddModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header"><h3>Register New Chef</h3><button className="modal-close" onClick={() => setShowAddModal(false)}>✕</button></div>
+            <div className="modal-header">
+              <h3>Register New Chef</h3>
+              <button className="modal-close" onClick={() => setShowAddModal(false)} disabled={saving}>✕</button>
+            </div>
             <form onSubmit={handleAddChef}>
               <div className="modal-body">
-                <div className="form-group"><label>Full Name</label><input className="form-input" name="name" placeholder="Chef's full name" required /></div>
-                <div className="form-group"><label>Email</label><input className="form-input" name="email" type="email" placeholder="chef@restaurant.com" required /></div>
-                <div className="form-group"><label>Restaurant</label><input className="form-input" name="restaurant" placeholder="Restaurant name" required /></div>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>
+                  This creates a real Supabase account. The chef will be able to log in on the mobile app using their email + OTP code.
+                </p>
+                <div className="form-group">
+                  <label>Full Name *</label>
+                  <input className="form-input" name="name" placeholder="Chef's full name" required />
+                </div>
+                <div className="form-group">
+                  <label>Email Address *</label>
+                  <input className="form-input" name="email" type="email" placeholder="chef@restaurant.com" required />
+                </div>
+                <div className="form-group">
+                  <label>Restaurant Name *</label>
+                  <input className="form-input" name="restaurant" placeholder="Restaurant name" required />
+                </div>
+                <div className="form-group">
+                  <label>Phone Number</label>
+                  <input className="form-input" name="phone" placeholder="+1 234 567 8900" />
+                </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Register</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Modal */}
-      {editChef && (
-        <div className="modal-overlay" onClick={() => setEditChef(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header"><h3>Edit Chef</h3><button className="modal-close" onClick={() => setEditChef(null)}>✕</button></div>
-            <form onSubmit={handleSaveEdit}>
-              <div className="modal-body">
-                <div className="form-group"><label>Full Name</label><input className="form-input" name="name" defaultValue={editChef.name} required /></div>
-                <div className="form-group"><label>Email</label><input className="form-input" name="email" type="email" defaultValue={editChef.email} required /></div>
-                <div className="form-group"><label>Restaurant</label><input className="form-input" name="restaurant" defaultValue={editChef.restaurant} required /></div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn" onClick={() => setEditChef(null)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Save</button>
+                <button type="button" className="btn" onClick={() => setShowAddModal(false)} disabled={saving}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? 'Creating Account...' : 'Register Chef'}
+                </button>
               </div>
             </form>
           </div>

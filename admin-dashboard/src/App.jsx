@@ -28,17 +28,38 @@ const TITLES = {
   activity: 'Activity Log',
 };
 
+function restoreSession() {
+  const savedToken = sessionStorage.getItem('admin_token');
+  if (!savedToken) return { admin: null, token: null };
+  try {
+    const payload = JSON.parse(atob(savedToken.split('.')[1]));
+    if (payload.exp * 1000 > Date.now()) {
+      return {
+        admin: { email: payload.email, name: payload.name, role: payload.role },
+        token: savedToken,
+      };
+    }
+  } catch {
+    // invalid token
+  }
+  sessionStorage.removeItem('admin_token');
+  return { admin: null, token: null };
+}
+
 export default function App() {
-  const [admin, setAdmin] = useState(null); // null = not logged in
+  const [session, setSession] = useState(() => restoreSession());
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleLogin = (user) => {
-    setAdmin(user);
+  const { admin, token } = session;
+
+  const handleLogin = (adminUser, jwt) => {
+    setSession({ admin: adminUser, token: jwt });
   };
 
   const handleLogout = () => {
-    setAdmin(null);
+    sessionStorage.removeItem('admin_token');
+    setSession({ admin: null, token: null });
     setCurrentPage('dashboard');
     setSearchQuery('');
   };
@@ -66,7 +87,7 @@ export default function App() {
           admin={admin}
         />
         <div className="page-content">
-          <PageComponent searchQuery={searchQuery} />
+          <PageComponent searchQuery={searchQuery} token={token} />
         </div>
       </div>
     </>

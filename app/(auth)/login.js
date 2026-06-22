@@ -1,26 +1,37 @@
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
+import { useState } from 'react';
+import {
+  View, StyleSheet, KeyboardAvoidingView, Platform,
+  ScrollView, Pressable, Alert,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Input } from '../../src/components/ui';
-import { useAuthStore } from '../../src/store';
 import { colors, spacing, radius } from '../../src/theme';
-import { useState } from 'react';
+import { signInWithOTP } from '../../src/services/authService';
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const login = useAuthStore((s) => s.login);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Role will be determined by backend
-    login(
-      { id: '1', name: 'Guest User', email: email || 'guest@foodorder.com' },
-      'customer'
-    );
-    router.replace('/(auth)/location');
+  const handleLogin = async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return Alert.alert('Error', 'Please enter your email address.');
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) return Alert.alert('Error', 'Please enter a valid email address.');
+
+    setLoading(true);
+    try {
+      await signInWithOTP(trimmed);
+      router.push({ pathname: '/(auth)/verification', params: { email: trimmed, mode: 'login' } });
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -32,7 +43,7 @@ export default function LoginScreen() {
       <View style={[styles.header, { paddingTop: insets.top + spacing['2xl'] }]}>
         <Text variant="h1" style={styles.heading}>Log In</Text>
         <Text variant="bodySmall" style={styles.subtitle}>
-          Please sign in to your existing account
+          Enter your email and we'll send you a verification code
         </Text>
       </View>
 
@@ -45,7 +56,6 @@ export default function LoginScreen() {
       >
         {/* Form */}
         <View style={styles.form}>
-
           <View style={styles.inputGroup}>
             <Text variant="label" style={styles.inputLabel}>EMAIL</Text>
             <Input
@@ -54,27 +64,18 @@ export default function LoginScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoComplete="email"
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text variant="label" style={styles.inputLabel}>PASSWORD</Text>
-            <Input
-              placeholder="••••••••••"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-          </View>
-
-          <Pressable onPress={() => router.push('/(auth)/forgot-password')} hitSlop={8}>
-            <Text variant="bodySmall" style={styles.forgotText}>
-              Forgot Password
+          <Pressable
+            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            <Text variant="body" style={styles.loginButtonText}>
+              {loading ? 'SENDING CODE...' : 'SEND CODE →'}
             </Text>
-          </Pressable>
-
-          <Pressable style={styles.loginButton} onPress={handleLogin}>
-            <Text variant="body" style={styles.loginButtonText}>LOG IN</Text>
           </Pressable>
         </View>
 
@@ -89,19 +90,11 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          <Text variant="bodySmall" style={styles.orText}>Or</Text>
-
-          {/* Social login icons */}
-          <View style={styles.socialRow}>
-            <Pressable style={[styles.socialButton, styles.socialFacebook]} onPress={handleLogin}>
-              <Ionicons name="logo-facebook" size={24} color={colors.textInverse} />
-            </Pressable>
-            <Pressable style={[styles.socialButton, styles.socialTwitter]} onPress={handleLogin}>
-              <Ionicons name="logo-twitter" size={24} color={colors.textInverse} />
-            </Pressable>
-            <Pressable style={[styles.socialButton, styles.socialApple]} onPress={handleLogin}>
-              <Ionicons name="logo-apple" size={24} color={colors.textInverse} />
-            </Pressable>
+          <View style={styles.infoBox}>
+            <Ionicons name="mail-outline" size={16} color={colors.primary} />
+            <Text variant="bodySmall" style={styles.infoText}>
+              We'll email you a 6-digit code to verify your identity — no password needed.
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -110,10 +103,7 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.splashDark,
-  },
+  container: { flex: 1, backgroundColor: colors.splashDark },
   header: {
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing['2xl'],
@@ -124,10 +114,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: spacing.sm,
   },
-  subtitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 15,
-  },
+  subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 15 },
   content: {
     flex: 1,
     backgroundColor: colors.background,
@@ -139,25 +126,14 @@ const styles = StyleSheet.create({
     paddingTop: spacing['2xl'],
     gap: spacing['2xl'],
   },
-  form: {
-    gap: spacing.lg,
-  },
-
-  inputGroup: {
-    gap: spacing.xs,
-  },
+  form: { gap: spacing.lg },
+  inputGroup: { gap: spacing.xs },
   inputLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.text,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
-  },
-  forgotText: {
-    color: colors.primary,
-    fontWeight: '500',
-    textAlign: 'right',
-    fontSize: 14,
   },
   loginButton: {
     backgroundColor: colors.primary,
@@ -167,49 +143,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.sm,
   },
+  loginButtonDisabled: { opacity: 0.6 },
   loginButtonText: {
     color: colors.textInverse,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  footer: {
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
-  signUpRow: {
+  footer: { alignItems: 'center', gap: spacing.lg },
+  signUpRow: { flexDirection: 'row', alignItems: 'center' },
+  signUpLabel: { color: colors.textSecondary },
+  signUpLink: { color: colors.primary, fontWeight: '700' },
+  infoBox: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: colors.primaryLight || 'rgba(255,107,53,0.08)',
+    borderRadius: radius.md,
+    padding: spacing.md,
   },
-  signUpLabel: {
+  infoText: {
+    flex: 1,
     color: colors.textSecondary,
-  },
-  signUpLink: {
-    color: colors.primary,
-    fontWeight: '700',
-  },
-  orText: {
-    color: colors.textSecondary,
-    fontSize: 14,
-  },
-  socialRow: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-  },
-  socialButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  socialFacebook: {
-    backgroundColor: '#395998',
-  },
-  socialTwitter: {
-    backgroundColor: '#169CE8',
-  },
-  socialApple: {
-    backgroundColor: '#1A1A1A',
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

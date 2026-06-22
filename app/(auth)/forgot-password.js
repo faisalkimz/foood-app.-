@@ -1,19 +1,40 @@
 import { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
+import {
+  View, StyleSheet, KeyboardAvoidingView, Platform,
+  ScrollView, Pressable, Alert,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Input } from '../../src/components/ui';
 import { colors, spacing, radius } from '../../src/theme';
+import { signInWithOTP } from '../../src/services/authService';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSend = () => {
-    // Navigate to verification with email
-    router.push('/(auth)/verification');
+  const handleSend = async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return Alert.alert('Error', 'Please enter your email address.');
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) return Alert.alert('Error', 'Please enter a valid email address.');
+
+    setLoading(true);
+    try {
+      await signInWithOTP(trimmed);
+      router.push({
+        pathname: '/(auth)/verification',
+        params: { email: trimmed, mode: 'forgot' },
+      });
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to send code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -26,9 +47,9 @@ export default function ForgotPasswordScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={colors.textInverse} />
         </Pressable>
-        <Text variant="h1" style={styles.heading}>Forgot Password</Text>
+        <Text variant="h1" style={styles.heading}>Sign In</Text>
         <Text variant="bodySmall" style={styles.subtitle}>
-          Please sign in to your existing account
+          Enter your email and we'll send you a sign-in code
         </Text>
       </View>
 
@@ -46,26 +67,33 @@ export default function ForgotPasswordScreen() {
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
+            autoComplete="email"
           />
         </View>
 
         <Pressable
-          style={[styles.sendButton, !email && styles.sendButtonDisabled]}
+          style={[styles.sendButton, (!email || loading) && styles.sendButtonDisabled]}
           onPress={handleSend}
-          disabled={!email}
+          disabled={!email || loading}
         >
-          <Text variant="body" style={styles.sendText}>SEND CODE</Text>
+          <Text variant="body" style={styles.sendText}>
+            {loading ? 'SENDING...' : 'SEND CODE →'}
+          </Text>
         </Pressable>
+
+        <View style={styles.infoBox}>
+          <Ionicons name="mail-outline" size={16} color={colors.primary} />
+          <Text variant="bodySmall" style={styles.infoText}>
+            We'll send a 6-digit verification code to your email. Use it to sign in.
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.splashDark,
-  },
+  container: { flex: 1, backgroundColor: colors.splashDark },
   header: {
     backgroundColor: colors.splashDark,
     paddingHorizontal: spacing.xl,
@@ -84,24 +112,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: spacing.sm,
   },
-  subtitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-  },
+  subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
   content: {
     flex: 1,
     backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
-  contentInner: {
-    padding: spacing.xl,
-    gap: spacing.xl,
-  },
-  inputGroup: {
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-  },
+  contentInner: { padding: spacing.xl, gap: spacing.xl },
+  inputGroup: { gap: spacing.xs, marginTop: spacing.sm },
   inputLabel: {
     fontSize: 13,
     fontWeight: '600',
@@ -115,13 +134,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
   },
-  sendButtonDisabled: {
-    opacity: 0.5,
-  },
+  sendButtonDisabled: { opacity: 0.5 },
   sendText: {
     color: colors.textInverse,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: colors.primaryLight || 'rgba(255,107,53,0.08)',
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  infoText: { flex: 1, color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
 });

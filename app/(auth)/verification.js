@@ -1,38 +1,47 @@
 import { useState, useRef } from 'react';
-import { View, StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import {
+  View, StyleSheet, TextInput, Pressable,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+} from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
 import { colors, spacing, radius } from '../../src/theme';
+import { verifyOTP, signInWithOTP, signUpWithOTP, getProfile, updateProfile } from '../../src/services/authService';
+import { useAuthStore } from '../../src/store/authStore';
 
-const CODE_LENGTH = 4;
+const CODE_LENGTH = 8;
 
 export default function VerificationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { email, name, phone, mode } = useLocalSearchParams(); // mode: 'login' | 'signup' | 'forgot'
 
-  const [code, setCode] = useState(['', '', '', '']);
+  const [code, setCode] = useState(Array(CODE_LENGTH).fill(''));
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const inputRefs = useRef([]);
+  const login = useAuthStore((s) => s.login);
 
   const handleCodeChange = (text, index) => {
     const newCode = [...code];
     // Handle paste of full code
     if (text.length > 1) {
-      const chars = text.slice(0, CODE_LENGTH).split('');
-      chars.forEach((char, i) => {
-        if (i < CODE_LENGTH) newCode[i] = char;
-      });
+      const chars = text.replace(/\D/g, '').slice(0, CODE_LENGTH).split('');
+      chars.forEach((char, i) => { if (i < CODE_LENGTH) newCode[i] = char; });
       setCode(newCode);
-      inputRefs.current[CODE_LENGTH - 1]?.focus();
+      const nextEmpty = newCode.findIndex((c) => c === '');
+      const focusIdx = nextEmpty === -1 ? CODE_LENGTH - 1 : nextEmpty;
+      inputRefs.current[focusIdx]?.focus();
       return;
     }
 
-    newCode[index] = text;
+    const digit = text.replace(/\D/g, '');
+    newCode[index] = digit;
     setCode(newCode);
-
-    // Auto-focus next input
-    if (text && index < CODE_LENGTH - 1) {
+    if (digit && index < CODE_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -46,17 +55,81 @@ export default function VerificationScreen() {
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const fullCode = code.join('');
-    if (fullCode.length === CODE_LENGTH) {
-      // Mock verification — accept any 4-digit code
-      router.replace('/(auth)/location');
+    if (fullCode.length !== CODE_LENGTH) return;
+
+    setLoading(true);
+    try {
+      const { user } = await verifyOTP(email, fullCode);
+
+      if (!user) throw new Error('Verification failed. Please try again.');
+
+      // Fetch profile to get role
+      let profile;
+      try {
+        profile = await getProfile(user.id);
+      } catch {
+        // Profile created by trigger — might take a moment
+        profile = { role: 'customer', full_name: name || user.email };
+      }
+
+      // Save extra fields (name, phone) to profile if this is signup
+      if (mode === 'signup') {
+        const updates = {};
+        if (name) updates.full_name = name;
+        if (phone) updates.phone_number = phone;
+        if (Object.keys(updates).length > 0) {
+          try {
+            const updated = await updateProfile(user.id, updates);
+            profile = { ...profile, ...updated };
+          } catch {
+            // Non-critical — profile still works
+          }
+        }
+      }
+
+      // Update auth store
+      login({ ...user, ...profile }, profile.role || 'customer');
+
+      // Route based on role
+      const role = profile.role || 'customer';
+      if (role === 'chef') {
+        router.replace('/(chef)');
+      } else {
+        // First time? Go through location onboarding, else go to tabs
+        router.replace(mode === 'signup' ? '/(auth)/location' : '/(tabs)');
+      }
+    } catch (err) {
+      Alert.alert(
+        'Invalid Code',
+        err.message?.includes('expired')
+          ? 'This code has expired. Please request a new one.'
+          : err.message || 'The code you entered is incorrect. Please try again.',
+      );
+      setCode(Array(CODE_LENGTH).fill(''));
+      inputRefs.current[0]?.focus();
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleResend = () => {
-    setCode(['', '', '', '']);
-    inputRefs.current[0]?.focus();
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      if (mode === 'signup') {
+        await signUpWithOTP(email, name || '');
+      } else {
+        await signInWithOTP(email);
+      }
+      setCode(Array(CODE_LENGTH).fill(''));
+      inputRefs.current[0]?.focus();
+      Alert.alert('Code Sent', `A new verification code has been sent to ${email}`);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to resend code.');
+    } finally {
+      setResending(false);
+    }
   };
 
   const isComplete = code.every((c) => c !== '');
@@ -66,27 +139,20 @@ export default function VerificationScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Dark header area */}
+      {/* Dark header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing['2xl'] }]}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
+          <Ionicons name="arrow-back" size={24} color={colors.textInverse} />
+        </Pressable>
         <Text variant="h1" style={styles.heading}>Verification</Text>
         <Text variant="bodySmall" style={styles.subtitle}>
-          We have sent a code to your email
+          We sent a verification code to
         </Text>
-        <Text variant="body" style={styles.email}>example@gmail.com</Text>
+        <Text variant="body" style={styles.email}>{email}</Text>
       </View>
 
-      {/* White content area */}
+      {/* White content */}
       <View style={styles.content}>
-        {/* Code type toggle */}
-        <View style={styles.toggleRow}>
-          <Pressable style={[styles.toggleBtn, styles.toggleActive]} onPress={() => {}}>
-            <Text variant="bodySmall" style={styles.toggleActiveText}>CODE</Text>
-          </Pressable>
-          <Pressable style={styles.toggleBtn} onPress={() => router.replace('/(auth)/forgot-password')}>
-            <Text variant="bodySmall" style={styles.toggleText}>Password</Text>
-          </Pressable>
-        </View>
-
         {/* OTP Input boxes */}
         <View style={styles.codeRow}>
           {code.map((digit, index) => (
@@ -106,27 +172,42 @@ export default function VerificationScreen() {
               maxLength={1}
               selectTextOnFocus
               selectionColor={colors.primary}
+              editable={!loading}
             />
           ))}
         </View>
 
         {/* Verify button */}
         <Pressable
-          style={[styles.verifyButton, !isComplete && styles.verifyButtonDisabled]}
+          style={[styles.verifyButton, (!isComplete || loading) && styles.verifyButtonDisabled]}
           onPress={handleVerify}
-          disabled={!isComplete}
+          disabled={!isComplete || loading}
         >
-          <Text variant="body" style={styles.verifyText}>VERIFY</Text>
+          {loading ? (
+            <ActivityIndicator color={colors.textInverse} />
+          ) : (
+            <Text variant="body" style={styles.verifyText}>VERIFY →</Text>
+          )}
         </Pressable>
 
         {/* Resend */}
         <View style={styles.resendRow}>
           <Text variant="bodySmall" style={styles.resendLabel}>
-            Didn't receive code?{' '}
+            Didn't receive the code?{' '}
           </Text>
-          <Pressable onPress={handleResend} hitSlop={8}>
-            <Text variant="bodySmall" style={styles.resendLink}>Resend Again</Text>
+          <Pressable onPress={handleResend} hitSlop={8} disabled={resending}>
+            <Text variant="bodySmall" style={[styles.resendLink, resending && { opacity: 0.5 }]}>
+              {resending ? 'Sending...' : 'Resend'}
+            </Text>
           </Pressable>
+        </View>
+
+        {/* Info note */}
+        <View style={styles.noteBox}>
+          <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+          <Text variant="bodySmall" style={styles.noteText}>
+            Check your spam folder if you don't see it. The code expires in 10 minutes.
+          </Text>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -134,30 +215,27 @@ export default function VerificationScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.splashDark,
-  },
+  container: { flex: 1, backgroundColor: colors.splashDark },
   header: {
     backgroundColor: colors.splashDark,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing['2xl'],
   },
+  backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
   heading: {
     color: colors.textInverse,
     fontSize: 30,
     fontWeight: '700',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
-  subtitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-  },
-  email: {
-    color: colors.textInverse,
-    fontWeight: '500',
-    marginTop: spacing.xs,
-  },
+  subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
+  email: { color: colors.textInverse, fontWeight: '600', marginTop: 2 },
   content: {
     flex: 1,
     backgroundColor: colors.background,
@@ -166,48 +244,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing['2xl'],
   },
-  toggleRow: {
-    flexDirection: 'row',
-    marginBottom: spacing['2xl'],
-    gap: spacing.sm,
-  },
-  toggleBtn: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.full,
-    backgroundColor: colors.backgroundSecondary,
-  },
-  toggleActive: {
-    backgroundColor: colors.splashDark,
-  },
-  toggleActiveText: {
-    color: colors.textInverse,
-    fontWeight: '600',
-  },
-  toggleText: {
-    color: colors.textSecondary,
-  },
   codeRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     marginBottom: spacing['2xl'],
   },
   codeInput: {
-    width: 60,
-    height: 60,
+    width: 40,
+    height: 52,
     borderRadius: radius.md,
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 1.5,
     borderColor: colors.border,
     textAlign: 'center',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.text,
   },
   codeInputFocused: {
     borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.primaryLight || 'rgba(255,107,53,0.06)',
   },
   codeInputFilled: {
     borderColor: colors.primary,
@@ -218,11 +275,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.base,
     borderRadius: radius.md,
     alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
     marginBottom: spacing.xl,
   },
-  verifyButtonDisabled: {
-    opacity: 0.5,
-  },
+  verifyButtonDisabled: { opacity: 0.5 },
   verifyText: {
     color: colors.textInverse,
     fontSize: 16,
@@ -232,12 +289,17 @@ const styles = StyleSheet.create({
   resendRow: {
     flexDirection: 'row',
     justifyContent: 'center',
+    marginBottom: spacing.xl,
   },
-  resendLabel: {
-    color: colors.textSecondary,
+  resendLabel: { color: colors.textSecondary },
+  resendLink: { color: colors.primary, fontWeight: '600' },
+  noteBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: radius.md,
+    padding: spacing.md,
   },
-  resendLink: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
+  noteText: { flex: 1, color: colors.textSecondary, fontSize: 12, lineHeight: 17 },
 });

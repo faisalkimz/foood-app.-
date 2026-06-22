@@ -31,7 +31,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ==========================================
 -- 2. RESTAURANTS TABLE
@@ -140,7 +140,7 @@ CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USIN
 -- Restaurants: Viewable by everyone. Only chefs can update their own.
 CREATE POLICY "Restaurants are viewable by everyone." ON public.restaurants FOR SELECT USING (true);
 CREATE POLICY "Chefs can update own restaurant." ON public.restaurants FOR UPDATE USING (auth.uid() = chef_id);
--- Note: Admins inserting restaurants is handled either by bypassing RLS (using service_role key) or by adding an Admin policy.
+CREATE POLICY "Chefs can create their own restaurant." ON public.restaurants FOR INSERT WITH CHECK (auth.uid() = chef_id);
 
 -- Menu Items: Viewable by everyone. Chefs manage their own items.
 CREATE POLICY "Menu items are viewable by everyone." ON public.menu_items FOR SELECT USING (true);
@@ -178,3 +178,17 @@ CREATE POLICY "Users manage own favorites." ON public.favorites FOR ALL USING (a
 
 -- Addresses
 CREATE POLICY "Users manage own addresses." ON public.addresses FOR ALL USING (auth.uid() = customer_id);
+
+-- ==========================================
+-- INDEXES
+-- ==========================================
+CREATE INDEX idx_restaurants_chef ON public.restaurants(chef_id);
+CREATE INDEX idx_menu_items_restaurant ON public.menu_items(restaurant_id);
+CREATE INDEX idx_orders_customer ON public.orders(customer_id);
+CREATE INDEX idx_orders_restaurant ON public.orders(restaurant_id);
+CREATE INDEX idx_orders_status ON public.orders(status);
+CREATE INDEX idx_order_items_order ON public.order_items(order_id);
+CREATE INDEX idx_favorites_customer ON public.favorites(customer_id);
+CREATE UNIQUE INDEX idx_addresses_single_default ON public.addresses(customer_id) WHERE is_default = true;
+CREATE UNIQUE INDEX idx_favorites_restaurant ON public.favorites(customer_id, restaurant_id) WHERE restaurant_id IS NOT NULL;
+CREATE UNIQUE INDEX idx_favorites_menu_item ON public.favorites(customer_id, menu_item_id) WHERE menu_item_id IS NOT NULL;

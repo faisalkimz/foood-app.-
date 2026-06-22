@@ -6,6 +6,7 @@ import { Text } from '../../src/components/ui';
 import { useAuthStore, useThemeStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
 import { spacing, radius } from '../../src/theme';
+import { signOut } from '../../src/services/authService';
 
 const menuSections = [
   {
@@ -40,7 +41,6 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
-  const login = useAuthStore((s) => s.login);
   const logout = useAuthStore((s) => s.logout);
   const isDark = useThemeStore((s) => s.isDark);
   const toggleTheme = useThemeStore((s) => s.toggle);
@@ -48,8 +48,16 @@ export default function ProfileScreen() {
 
   const handleMenuPress = (item) => {
     if (item.route === 'logout') {
-      logout();
-      router.replace('/(auth)/login');
+      Alert.alert('Log Out', 'Are you sure you want to log out?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out', style: 'destructive', onPress: async () => {
+            try { await signOut(); } catch { /* ignore */ }
+            logout();
+            router.replace('/(auth)/login');
+          },
+        },
+      ]);
     } else if (item.route) {
       router.push(item.route);
     }
@@ -97,10 +105,10 @@ export default function ProfileScreen() {
           style={[styles.avatar, { borderColor: c.primary }]}
         />
         <Text variant="h2" style={[styles.userName, { color: c.text }]}>
-          {user?.name || 'Vishal Khadok'}
+          {user?.full_name || user?.name || 'User'}
         </Text>
         <Text variant="bodySmall" style={{ color: c.textMuted }}>
-          {user?.email || 'I love fast food'}
+          {user?.email || ''}
         </Text>
       </View>
 

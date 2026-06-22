@@ -1,24 +1,59 @@
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
+import { useState } from 'react';
+import {
+  View, StyleSheet, KeyboardAvoidingView, Platform,
+  ScrollView, Pressable, Alert,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Input } from '../../src/components/ui';
-import { useAuthStore } from '../../src/store';
 import { colors, spacing, radius } from '../../src/theme';
-import { useState } from 'react';
+import { signUpWithOTP } from '../../src/services/authService';
 
 export default function SignupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const login = useAuthStore((s) => s.login);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignup = () => {
-    login({ id: '1', name: name || 'New User', email: email || 'user@foodorder.com' });
-    router.push('/(auth)/verification');
+  const handleSignup = async () => {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPhone = phone.trim();
+
+    if (!trimmedName) return Alert.alert('Error', 'Please enter your full name.');
+    if (!trimmedEmail) return Alert.alert('Error', 'Please enter your email address.');
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) return Alert.alert('Error', 'Please enter a valid email address.');
+
+    setLoading(true);
+    try {
+      await signUpWithOTP(trimmedEmail, trimmedName);
+      router.push({
+        pathname: '/(auth)/verification',
+        params: {
+          email: trimmedEmail,
+          name: trimmedName,
+          phone: trimmedPhone,
+          mode: 'signup',
+        },
+      });
+    } catch (err) {
+      if (err.message?.toLowerCase().includes('already registered')) {
+        Alert.alert(
+          'Account Exists',
+          'An account with this email already exists. Please log in instead.',
+          [{ text: 'Log In', onPress: () => router.replace('/(auth)/login') }, { text: 'Cancel' }]
+        );
+      } else {
+        Alert.alert('Error', err.message || 'Failed to sign up. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -33,7 +68,7 @@ export default function SignupScreen() {
         </Pressable>
         <Text variant="h1" style={styles.heading}>Sign Up</Text>
         <Text variant="bodySmall" style={styles.subtitle}>
-          Please sign up to get started
+          Create your account — we'll send a code to verify your email
         </Text>
       </View>
 
@@ -46,8 +81,13 @@ export default function SignupScreen() {
       >
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text variant="label" style={styles.inputLabel}>NAME</Text>
-            <Input placeholder="John Doe" value={name} onChangeText={setName} />
+            <Text variant="label" style={styles.inputLabel}>FULL NAME</Text>
+            <Input
+              placeholder="John Doe"
+              value={name}
+              onChangeText={setName}
+              autoComplete="name"
+            />
           </View>
 
           <View style={styles.inputGroup}>
@@ -58,31 +98,29 @@ export default function SignupScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoComplete="email"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text variant="label" style={styles.inputLabel}>PASSWORD</Text>
+            <Text variant="label" style={styles.inputLabel}>PHONE NUMBER</Text>
             <Input
-              placeholder="••••••••••"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
+              placeholder="+256 700 123 456"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              autoComplete="tel"
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text variant="label" style={styles.inputLabel}>RE-TYPE PASSWORD</Text>
-            <Input
-              placeholder="••••••••••"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-            />
-          </View>
-
-          <Pressable style={styles.signupButton} onPress={handleSignup}>
-            <Text variant="body" style={styles.signupButtonText}>SIGN UP</Text>
+          <Pressable
+            style={[styles.signupButton, loading && styles.buttonDisabled]}
+            onPress={handleSignup}
+            disabled={loading}
+          >
+            <Text variant="body" style={styles.signupButtonText}>
+              {loading ? 'SENDING CODE...' : 'CREATE ACCOUNT →'}
+            </Text>
           </Pressable>
         </View>
 
@@ -95,6 +133,13 @@ export default function SignupScreen() {
               <Text variant="bodySmall" style={styles.loginLink}>Sign In</Text>
             </Pressable>
           </View>
+
+          <View style={styles.infoBox}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={colors.primary} />
+            <Text variant="bodySmall" style={styles.infoText}>
+              No password required. We verify your identity with a one-time code sent to your email.
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -102,14 +147,8 @@ export default function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.splashDark,
-  },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing['2xl'],
-  },
+  container: { flex: 1, backgroundColor: colors.splashDark },
+  header: { paddingHorizontal: spacing.xl, paddingBottom: spacing['2xl'] },
   backBtn: {
     width: 40,
     height: 40,
@@ -123,10 +162,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: spacing.sm,
   },
-  subtitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 15,
-  },
+  subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 15 },
   content: {
     flex: 1,
     backgroundColor: colors.background,
@@ -138,12 +174,8 @@ const styles = StyleSheet.create({
     paddingTop: spacing['2xl'],
     gap: spacing['2xl'],
   },
-  form: {
-    gap: spacing.lg,
-  },
-  inputGroup: {
-    gap: spacing.xs,
-  },
+  form: { gap: spacing.lg },
+  inputGroup: { gap: spacing.xs },
   inputLabel: {
     fontSize: 13,
     fontWeight: '600',
@@ -158,24 +190,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.sm,
   },
+  buttonDisabled: { opacity: 0.6 },
   signupButtonText: {
     color: colors.textInverse,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  footer: {
-    alignItems: 'center',
-  },
-  loginRow: {
+  footer: { alignItems: 'center', gap: spacing.lg },
+  loginRow: { flexDirection: 'row', alignItems: 'center' },
+  loginLabel: { color: colors.textSecondary },
+  loginLink: { color: colors.primary, fontWeight: '700' },
+  infoBox: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: colors.primaryLight || 'rgba(255,107,53,0.08)',
+    borderRadius: radius.md,
+    padding: spacing.md,
   },
-  loginLabel: {
-    color: colors.textSecondary,
-  },
-  loginLink: {
-    color: colors.primary,
-    fontWeight: '700',
-  },
+  infoText: { flex: 1, color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
 });

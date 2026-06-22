@@ -6,6 +6,7 @@ import { Text } from '../../src/components/ui';
 import { useTheme } from '../../src/providers/ThemeProvider';
 import { useAuthStore } from '../../src/store';
 import { spacing, radius } from '../../src/theme';
+import { signOut } from '../../src/services/authService';
 
 const menuSections = [
   {
@@ -33,17 +34,19 @@ export default function ChefProfileScreen() {
   const insets = useSafeAreaInsets();
   const c = useTheme();
   const user = useAuthStore((s) => s.user);
-  const login = useAuthStore((s) => s.login);
   const logout = useAuthStore((s) => s.logout);
 
   const handleMenuPress = (item) => {
     if (item.route === 'logout') {
       Alert.alert('Log Out', 'Are you sure you want to log out?', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Log Out', style: 'destructive', onPress: () => {
-          logout();
-          router.replace('/(auth)/login');
-        }},
+        {
+          text: 'Log Out', style: 'destructive', onPress: async () => {
+            try { await signOut(); } catch { /* ignore */ }
+            logout();
+            router.replace('/(auth)/login');
+          },
+        },
       ]);
     } else {
       router.push(item.route);
@@ -63,8 +66,8 @@ export default function ChefProfileScreen() {
             style={styles.avatar}
           />
           <View style={styles.profileInfo}>
-            <Text variant="h2" style={styles.profileName}>{user?.name || 'Chef'}</Text>
-            <Text variant="bodySmall" style={styles.profileEmail}>{user?.email || 'chef@foodorder.com'}</Text>
+            <Text variant="h2" style={styles.profileName}>{user?.full_name || user?.name || 'Chef'}</Text>
+            <Text variant="bodySmall" style={styles.profileEmail}>{user?.email || ''}</Text>
             <View style={styles.profileMeta}>
               <View style={styles.metaItem}>
                 <Ionicons name="star" size={14} color="#FFB800" />

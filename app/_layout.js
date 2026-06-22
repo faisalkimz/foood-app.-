@@ -1,14 +1,51 @@
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { ThemeProvider, useTheme } from '../src/providers/ThemeProvider';
 import { useThemeStore } from '../src/store';
+import { useAuthStore } from '../src/store/authStore';
+import { supabase } from '../src/services/supabase';
+import { getProfile } from '../src/services/authService';
 
 function AppStack() {
   const c = useTheme();
   const isDark = useThemeStore((s) => s.isDark);
+  const { initialize, login, logout, isLoading } = useAuthStore();
+
+  useEffect(() => {
+    // Restore session from AsyncStorage on app start
+    initialize();
+
+    // Listen for Supabase auth state changes (login / logout / token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            const profile = await getProfile(session.user.id);
+            login({ ...session.user, ...profile }, profile.role || 'customer');
+          } catch {
+            // Profile might not exist yet (new signup), let verification handle it
+          }
+        } else if (event === 'SIGNED_OUT') {
+          logout();
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Show spinner while restoring session
+  if (isLoading) {
+    return (
+      <View style={[styles.loader, { backgroundColor: c.background }]}>
+        <ActivityIndicator size="large" color="#FF6B35" />
+      </View>
+    );
+  }
 
   return (
     <>
@@ -67,7 +104,10 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  root: {
+  root: { flex: 1 },
+  loader: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

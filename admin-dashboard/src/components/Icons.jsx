@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // Clean SVG icons — no emojis, human-written look
 const I = (d, s = 20) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
