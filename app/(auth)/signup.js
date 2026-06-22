@@ -23,11 +23,11 @@ export default function SignupScreen() {
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPhone = phone.trim();
 
-    if (!trimmedName) return showToast({ type: 'warning', title: 'Missing Name', message: 'Please enter your full name.' });
-    if (!trimmedEmail) return showToast({ type: 'warning', title: 'Missing Email', message: 'Please enter your email address.' });
+    if (!trimmedName) return showToast({ type: 'warning', message: 'Please enter your full name.' });
+    if (!trimmedEmail) return showToast({ type: 'warning', message: 'Please enter your email address.' });
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) return showToast({ type: 'warning', title: 'Invalid Email', message: 'Please enter a valid email address.' });
+    if (!emailRegex.test(trimmedEmail)) return showToast({ type: 'warning', message: 'Please enter a valid email address.' });
 
     setLoading(true);
     try {
@@ -43,9 +43,9 @@ export default function SignupScreen() {
       });
     } catch (err) {
       if (err.message?.toLowerCase().includes('already registered')) {
-        showToast({ type: 'info', title: 'Account Exists', message: 'This email is already registered. Try logging in instead.' });
+        showToast({ type: 'info', message: 'This email is already registered. Try logging in instead.' });
       } else {
-        showToast({ type: 'error', title: 'Sign Up Failed', message: err.message || 'Could not create account. Please try again.' });
+        showToast({ type: 'error', message: err.message || 'Could not create account. Please try again.' });
       }
     } finally {
       setLoading(false);

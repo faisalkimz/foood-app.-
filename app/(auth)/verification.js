@@ -104,7 +104,6 @@ export default function VerificationScreen() {
     } catch (err) {
       showToast({
         type: 'error',
-        title: 'Invalid Code',
         message: err.message?.includes('expired')
           ? 'This code has expired. Please request a new one.'
           : err.message || 'The code you entered is incorrect. Please try again.',
@@ -126,9 +125,9 @@ export default function VerificationScreen() {
       }
       setCode(Array(CODE_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
-      showToast({ type: 'success', title: 'Code Sent!', message: `A new verification code was sent to ${email}` });
+      showToast({ type: 'success', message: `New verification code sent to ${email}` });
     } catch (err) {
-      showToast({ type: 'error', title: 'Resend Failed', message: err.message || 'Could not resend code. Please try again.' });
+      showToast({ type: 'error', message: err.message || 'Could not resend code. Please try again.' });
     } finally {
       setResending(false);
     }

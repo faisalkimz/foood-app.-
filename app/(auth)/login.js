@@ -18,17 +18,17 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     const trimmed = email.trim().toLowerCase();
-    if (!trimmed) return showToast({ type: 'warning', title: 'Missing Email', message: 'Please enter your email address.' });
+    if (!trimmed) return showToast({ type: 'warning', message: 'Please enter your email address.' });
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmed)) return showToast({ type: 'warning', title: 'Invalid Email', message: 'Please enter a valid email address.' });
+    if (!emailRegex.test(trimmed)) return showToast({ type: 'warning', message: 'Please enter a valid email address.' });
 
     setLoading(true);
     try {
       await signInWithOTP(trimmed);
       router.push({ pathname: '/(auth)/verification', params: { email: trimmed, mode: 'login' } });
     } catch (err) {
-      showToast({ type: 'error', title: 'Sign In Failed', message: err.message || 'Could not send code. Please try again.' });
+      showToast({ type: 'error', message: err.message || 'Could not send code. Please try again.' });
     } finally {
       setLoading(false);
     }
