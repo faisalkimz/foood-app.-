@@ -14,8 +14,4 @@ export const useAuthStore = create((set, get) => ({
 
   updateUser: (updates) =>
     set((state) => ({ user: { ...state.user, ...updates } })),
-
-  get isChef() {
-    return get().role === 'chef';
-  },
 }));

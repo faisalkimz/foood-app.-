@@ -7,7 +7,7 @@ import { Text } from '../../src/components/ui';
 import { menuItems } from '../../src/services/mock/data';
 import { useCartStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
-import { colors, spacing, radius } from '../../src/theme';
+import { spacing, radius } from '../../src/theme';
 
 const sizes = [
   { label: '10"', value: 'sm' },
@@ -152,18 +152,18 @@ export default function FoodDetailScreen() {
         <Text variant="h2" style={[styles.totalPrice, { color: c.text }]}>UGX {totalPrice}</Text>
 
         <View style={styles.quantityRow}>
-          <Pressable style={styles.qtyBtn} onPress={() => setQuantity(Math.max(1, quantity - 1))}>
-            <Ionicons name="remove" size={18} color={colors.textInverse} />
+          <Pressable style={[styles.qtyBtn, { backgroundColor: c.primary }]} onPress={() => setQuantity(Math.max(1, quantity - 1))}>
+            <Ionicons name="remove" size={18} color={c.textInverse} />
           </Pressable>
-          <Text variant="h3" style={styles.qtyText}>{quantity}</Text>
-          <Pressable style={styles.qtyBtn} onPress={() => setQuantity(quantity + 1)}>
-            <Ionicons name="add" size={18} color={colors.textInverse} />
+          <Text variant="h3" style={[styles.qtyText, { color: c.text }]}>{quantity}</Text>
+          <Pressable style={[styles.qtyBtn, { backgroundColor: c.primary }]} onPress={() => setQuantity(quantity + 1)}>
+            <Ionicons name="add" size={18} color={c.textInverse} />
           </Pressable>
         </View>
 
-        <Pressable style={styles.addCartBtn} onPress={handleAddToCart}>
-          <Ionicons name="cart" size={20} color={colors.textInverse} />
-          <Text variant="body" style={styles.addCartText}>ADD TO CART</Text>
+        <Pressable style={[styles.addCartBtn, { backgroundColor: c.primary }]} onPress={handleAddToCart}>
+          <Ionicons name="cart" size={20} color={c.textInverse} />
+          <Text variant="body" style={[styles.addCartText, { color: c.textInverse }]}>ADD TO CART</Text>
         </Pressable>
       </View>
     </View>
@@ -171,45 +171,43 @@ export default function FoodDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1 },
   headerBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.base, paddingBottom: spacing.sm,
   },
   iconBtn: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.backgroundSecondary,
+    width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
   },
   notFound: { textAlign: 'center', marginTop: spacing.xl },
   imageWrapper: {
-    alignItems: 'center', paddingVertical: spacing.lg, backgroundColor: colors.backgroundSecondary,
+    alignItems: 'center', paddingVertical: spacing.lg,
     borderBottomLeftRadius: 40, borderBottomRightRadius: 40,
   },
   foodImage: { width: 220, height: 220, borderRadius: 110 },
   heartBtn: {
     position: 'absolute', top: spacing.base, right: spacing.xl,
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.background,
+    width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
     elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4,
   },
   content: { padding: spacing.xl },
   foodName: { fontSize: 26, fontWeight: '700', marginBottom: spacing.xs },
-  description: { color: colors.textSecondary, lineHeight: 20, fontSize: 13, marginBottom: spacing.md },
+  description: { lineHeight: 20, fontSize: 13, marginBottom: spacing.md },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.xl },
   ratingText: { fontWeight: '600', fontSize: 13 },
-  sizeLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.5, marginBottom: spacing.sm, color: colors.text },
+  sizeLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.5, marginBottom: spacing.sm },
   sizeRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
   sizeBtn: {
-    width: 48, height: 48, borderRadius: 24, backgroundColor: colors.backgroundSecondary,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.border,
+    width: 48, height: 48, borderRadius: 24,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5,
   },
-  sizeBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  sizeText: { fontWeight: '700', color: colors.text, fontSize: 14 },
-  sizeTextActive: { color: colors.textInverse },
-  ingredientsLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.5, marginBottom: spacing.sm, color: colors.text },
+  sizeText: { fontWeight: '700', fontSize: 14 },
+  ingredientsLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.5, marginBottom: spacing.sm },
   ingredientsRow: { flexDirection: 'row', gap: spacing.md },
   ingredientCircle: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: colors.backgroundSecondary,
+    width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
   },
   ingredientEmoji: { fontSize: 20 },
@@ -217,19 +215,19 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.xl, paddingTop: spacing.base,
-    backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.borderLight,
+    borderTopWidth: 1,
   },
-  totalPrice: { color: colors.text, fontWeight: '800', fontSize: 24 },
+  totalPrice: { fontWeight: '800', fontSize: 24 },
   quantityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   qtyBtn: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary,
+    width: 32, height: 32, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
   },
   qtyText: { fontSize: 18, fontWeight: '700' },
   addCartBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.primary, paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
     borderRadius: radius.full,
   },
-  addCartText: { color: colors.textInverse, fontWeight: '700', fontSize: 13, letterSpacing: 0.3 },
+  addCartText: { fontWeight: '700', fontSize: 13, letterSpacing: 0.3 },
 });

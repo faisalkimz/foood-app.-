@@ -153,7 +153,7 @@ export const popularFoods = [
   { id: 'pf2', name: 'Buffalo Pizza', restaurant: 'Cafenio Coffee Club', image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=200' },
 ];
 
-export const recentKeywords = ['Burger', 'Sandwich', 'Pizza', 'Sandwich'];
+export const recentKeywords = ['Burger', 'Sandwich', 'Pizza', 'Pasta'];
 
 export const suggestedRestaurants = [
   { id: '5', name: 'Pansi Restaurant', rating: 4.7 },
@@ -161,37 +161,8 @@ export const suggestedRestaurants = [
   { id: '6', name: 'Cafenio Coffee Club', rating: 4.0 },
 ];
 
-export const onboardingSlides = [
-  {
-    id: '1',
-    title: 'All your favorites',
-    description: 'Get all your loved foods in one place, you just place the order we do the rest.',
-    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',
-  },
-  {
-    id: '2',
-    title: 'Order from chosen chef',
-    description: 'Get all your loved foods in one place, you just place the order we do the rest.',
-    image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400',
-  },
-  {
-    id: '3',
-    title: 'Free delivery offers',
-    description: 'Get all your loved foods in one place, you just place the order we do the rest.',
-    image: 'https://images.unsplash.com/photo-1526367790999-0150786686a2?w=400',
-  },
-];
-
-export const offers = [
-  {
-    id: 'o1',
-    title: 'Hurry Offers!',
-    code: '#1243CD2',
-    discount: '25%',
-    description: 'Use the coupon get 25% discount',
-    color: '#FFB800',
-  },
-];
+// onboardingSlides removed — onboarding.js uses local require() images instead
+// offers removed — not used by any screen yet
 
 // ── Chef / Restaurant Side ──────────────────────────────────
 

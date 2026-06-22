@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
 import { useCartStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
-import { colors, spacing, radius } from '../../src/theme';
+import { spacing, radius } from '../../src/theme';
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -26,15 +26,15 @@ export default function CheckoutScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: c.background }]}>
+    <View style={[styles.container, { backgroundColor: c.splashDark }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={colors.textInverse} />
+          <Ionicons name="arrow-back" size={22} color={c.textInverse} />
         </Pressable>
-        <Text variant="h3" style={styles.headerTitle}>Cart</Text>
+        <Text variant="h3" style={[styles.headerTitle, { color: c.textInverse }]}>Cart</Text>
         <Pressable hitSlop={8} onPress={() => router.push('/(tabs)/cart')}>
-          <Text variant="bodySmall" style={styles.editText}>EDIT ITEMS</Text>
+          <Text variant="bodySmall" style={[styles.editText, { color: c.primary }]}>EDIT ITEMS</Text>
         </Pressable>
       </View>
 
@@ -46,14 +46,14 @@ export default function CheckoutScreen() {
               <Image source={{ uri: item.image }} style={styles.itemImage} />
               <View style={styles.itemInfo}>
                 <View style={styles.itemHeader}>
-                  <Text variant="body" style={styles.itemName} numberOfLines={2}>
+                  <Text variant="body" style={[styles.itemName, { color: c.textInverse }]} numberOfLines={2}>
                     {item.name}
                   </Text>
                   <Pressable onPress={() => removeItem(item.id)} hitSlop={8}>
-                    <Ionicons name="close-circle" size={22} color={colors.primary} />
+                    <Ionicons name="close-circle" size={22} color={c.primary} />
                   </Pressable>
                 </View>
-                <Text variant="h3" style={styles.itemPrice}>UGX {item.price}</Text>
+                <Text variant="h3" style={[styles.itemPrice, { color: c.primary }]}>UGX {item.price}</Text>
                 <View style={styles.itemControls}>
                   <Text variant="caption" style={styles.sizeLabel}>14"</Text>
                   <View style={styles.qtyControls}>
@@ -65,14 +65,14 @@ export default function CheckoutScreen() {
                           : removeItem(item.id)
                       }
                     >
-                      <Ionicons name="remove" size={14} color={colors.textInverse} />
+                      <Ionicons name="remove" size={14} color={c.textInverse} />
                     </Pressable>
-                    <Text variant="body" style={styles.qtyText}>{item.quantity}</Text>
+                    <Text variant="body" style={[styles.qtyText, { color: c.textInverse }]}>{item.quantity}</Text>
                     <Pressable
                       style={styles.qtyBtn}
                       onPress={() => updateQuantity(item.id, item.quantity + 1)}
                     >
-                      <Ionicons name="add" size={14} color={colors.textInverse} />
+                      <Ionicons name="add" size={14} color={c.textInverse} />
                     </Pressable>
                   </View>
                 </View>
@@ -83,40 +83,40 @@ export default function CheckoutScreen() {
       </View>
 
       {/* White bottom section */}
-      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + spacing.base }]}>
+      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background }]}>
         {/* Delivery address */}
         <View style={styles.addressSection}>
           <View style={styles.addressHeader}>
-            <Text variant="label" style={styles.addressLabel}>DELIVERY ADDRESS</Text>
+            <Text variant="label" style={[styles.addressLabel, { color: c.textMuted }]}>DELIVERY ADDRESS</Text>
             <Pressable hitSlop={8} onPress={() => {
               setEditAddress(address);
               setShowAddressModal(true);
             }}>
-              <Text variant="bodySmall" style={styles.editLink}>EDIT</Text>
+              <Text variant="bodySmall" style={[styles.editLink, { color: c.primary }]}>EDIT</Text>
             </Pressable>
           </View>
-          <View style={styles.addressBox}>
-            <Ionicons name="location-outline" size={18} color={colors.textMuted} />
-            <Text variant="body" style={styles.addressText}>{address}</Text>
+          <View style={[styles.addressBox, { backgroundColor: c.backgroundSecondary, borderColor: c.border }]}>
+            <Ionicons name="location-outline" size={18} color={c.textMuted} />
+            <Text variant="body" style={[styles.addressText, { color: c.textSecondary }]}>{address}</Text>
           </View>
         </View>
 
         {/* Total */}
         <View style={styles.totalRow}>
           <View>
-            <Text variant="caption" style={styles.totalLabel}>TOTAL:</Text>
-            <Text variant="h2" style={styles.totalPrice}>UGX {total}</Text>
+            <Text variant="caption" style={[styles.totalLabel, { color: c.textMuted }]}>TOTAL:</Text>
+            <Text variant="h2" style={[styles.totalPrice, { color: c.text }]}>UGX {total}</Text>
           </View>
           <Pressable hitSlop={8} onPress={() => Alert.alert('Price Breakdown', `Subtotal: UGX ${subtotal}\nDelivery Fee: Free\n\nTotal: UGX ${total}`)}>
-            <Text variant="bodySmall" style={styles.breakdownLink}>
+            <Text variant="bodySmall" style={[styles.breakdownLink, { color: c.primary }]}>
               Breakdown &gt;
             </Text>
           </Pressable>
         </View>
 
         {/* Place order button */}
-        <Pressable style={styles.placeOrderBtn} onPress={handlePlaceOrder}>
-          <Text variant="body" style={styles.placeOrderText}>PLACE ORDER</Text>
+        <Pressable style={[styles.placeOrderBtn, { backgroundColor: c.primary }]} onPress={handlePlaceOrder}>
+          <Text variant="body" style={[styles.placeOrderText, { color: c.textInverse }]}>PLACE ORDER</Text>
         </Pressable>
       </View>
 
@@ -154,7 +154,6 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.splashDark,
   },
   header: {
     flexDirection: 'row',
@@ -172,12 +171,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    color: colors.textInverse,
     fontSize: 18,
     fontWeight: '700',
   },
   editText: {
-    color: colors.primary,
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 0.3,
@@ -208,14 +205,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   itemName: {
-    color: colors.textInverse,
     fontWeight: '600',
     fontSize: 15,
     flex: 1,
     marginRight: spacing.sm,
   },
   itemPrice: {
-    color: colors.primary,
     fontWeight: '700',
     fontSize: 18,
     marginTop: 2,
@@ -245,12 +240,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   qtyText: {
-    color: colors.textInverse,
     fontWeight: '700',
     fontSize: 15,
   },
   bottomSection: {
-    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: spacing.xl,
@@ -268,11 +261,9 @@ const styles = StyleSheet.create({
   addressLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.textMuted,
     letterSpacing: 0.5,
   },
   editLink: {
-    color: colors.primary,
     fontWeight: '700',
     fontSize: 13,
   },
@@ -280,14 +271,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.backgroundSecondary,
     padding: spacing.base,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   addressText: {
-    color: colors.textSecondary,
     fontSize: 14,
   },
   totalRow: {
@@ -296,7 +284,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   totalLabel: {
-    color: colors.textMuted,
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.3,
@@ -304,21 +291,17 @@ const styles = StyleSheet.create({
   totalPrice: {
     fontSize: 28,
     fontWeight: '800',
-    color: colors.text,
   },
   breakdownLink: {
-    color: colors.primary,
     fontWeight: '600',
     fontSize: 13,
   },
   placeOrderBtn: {
-    backgroundColor: colors.primary,
     paddingVertical: spacing.base,
     borderRadius: radius.full,
     alignItems: 'center',
   },
   placeOrderText: {
-    color: colors.textInverse,
     fontWeight: '700',
     fontSize: 16,
     letterSpacing: 0.5,

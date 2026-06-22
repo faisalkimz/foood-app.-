@@ -27,7 +27,7 @@ export default function SearchScreen() {
 
   const toggleCategory = (cat) => {
     setSelectedCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+      prev.includes(cat) ? prev.filter((item) => item !== cat) : [...prev, cat]
     );
   };
 

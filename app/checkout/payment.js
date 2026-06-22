@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
 import { useCartStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
-import { colors, spacing, radius } from '../../src/theme';
+import { spacing, radius } from '../../src/theme';
 
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Cash', icon: 'cash-outline' },
@@ -80,10 +80,10 @@ export default function PaymentScreen() {
     <View style={[styles.container, { backgroundColor: c.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
+        <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: c.backgroundSecondary }]}>
+          <Ionicons name="arrow-back" size={22} color={c.text} />
         </Pressable>
-        <Text variant="h3">Payment</Text>
+        <Text variant="h3" style={{ color: c.text }}>Payment</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -97,7 +97,11 @@ export default function PaymentScreen() {
           {PAYMENT_METHODS.map((method) => (
             <Pressable
               key={method.id}
-              style={[styles.methodCard, selected === method.id && styles.methodCardActive]}
+              style={[
+                styles.methodCard,
+                { backgroundColor: c.backgroundSecondary, borderColor: 'transparent' },
+                selected === method.id && { borderColor: c.primary, backgroundColor: c.primaryLight },
+              ]}
               onPress={() => {
                 setSelected(method.id);
                 setShowAddCard(false);
@@ -105,17 +109,21 @@ export default function PaymentScreen() {
             >
               <View style={[
                 styles.methodIconWrap,
-                selected === method.id && styles.methodIconWrapActive,
+                { backgroundColor: c.background },
+                selected === method.id && { backgroundColor: c.primary },
               ]}>
                 <Ionicons
                   name={method.icon}
                   size={24}
-                  color={selected === method.id ? colors.textInverse : colors.textMuted}
+                  color={selected === method.id ? c.textInverse : c.textMuted}
                 />
               </View>
               <Text
                 variant="caption"
-                style={[styles.methodLabel, selected === method.id && styles.methodLabelActive]}
+                style={[
+                  styles.methodLabel, { color: c.textMuted },
+                  selected === method.id && { color: c.primary, fontWeight: '700' },
+                ]}
               >
                 {method.label}
               </Text>
@@ -125,12 +133,12 @@ export default function PaymentScreen() {
 
         {/* ========== CASH ========== */}
         {selected === 'cash' && (
-          <View style={styles.infoCard}>
+          <View style={[styles.infoCard, { backgroundColor: c.backgroundSecondary }]}>
             <View style={styles.cashIconWrap}>
               <Ionicons name="cash" size={36} color="#27AE60" />
             </View>
-            <Text variant="h3" style={styles.infoTitle}>Cash on Delivery</Text>
-            <Text variant="bodySmall" style={styles.infoText}>
+            <Text variant="h3" style={[styles.infoTitle, { color: c.text }]}>Cash on Delivery</Text>
+            <Text variant="bodySmall" style={[styles.infoText, { color: c.textSecondary }]}>
               Pay with cash when your order arrives at your doorstep. Please have the exact amount ready for the rider.
             </Text>
           </View>
@@ -140,103 +148,103 @@ export default function PaymentScreen() {
         {selected === 'card' && !showAddCard && (
           <>
             {/* Saved card visual */}
-            <View style={styles.cardVisual}>
+            <View style={[styles.cardVisual, { backgroundColor: c.splashDark }]}>
               <View style={styles.cardRow1}>
-                <Ionicons name="card" size={24} color={colors.textInverse} />
+                <Ionicons name="card" size={24} color={c.textInverse} />
                 <Text variant="bodySmall" style={styles.cardBrand}>Visa</Text>
               </View>
-              <Text variant="body" style={styles.cardNumberDisplay}>
+              <Text variant="body" style={[styles.cardNumberDisplay, { color: c.textInverse }]}>
                 •••• •••• •••• 4 3 6
               </Text>
               <View style={styles.cardRow3}>
                 <View>
                   <Text variant="caption" style={styles.cardSmallLabel}>CARD HOLDER</Text>
-                  <Text variant="bodySmall" style={styles.cardSmallValue}>Vishal Khadok</Text>
+                  <Text variant="bodySmall" style={[styles.cardSmallValue, { color: c.textInverse }]}>Vishal Khadok</Text>
                 </View>
                 <View>
                   <Text variant="caption" style={styles.cardSmallLabel}>EXPIRES</Text>
-                  <Text variant="bodySmall" style={styles.cardSmallValue}>09/28</Text>
+                  <Text variant="bodySmall" style={[styles.cardSmallValue, { color: c.textInverse }]}>09/28</Text>
                 </View>
               </View>
             </View>
-            <Pressable style={styles.addNewBtn} onPress={() => setShowAddCard(true)}>
-              <Ionicons name="add" size={20} color={colors.primary} />
-              <Text variant="body" style={styles.addNewText}>ADD NEW CARD</Text>
+            <Pressable style={[styles.addNewBtn, { borderColor: c.primary }]} onPress={() => setShowAddCard(true)}>
+              <Ionicons name="add" size={20} color={c.primary} />
+              <Text variant="body" style={[styles.addNewText, { color: c.primary }]}>ADD NEW CARD</Text>
             </Pressable>
           </>
         )}
 
         {selected === 'card' && showAddCard && (
-          <View style={styles.cardForm}>
+          <View style={[styles.cardForm, { backgroundColor: c.backgroundSecondary }]}>
             <View style={styles.cardFormHeader}>
-              <Text variant="h3">Add Card</Text>
+              <Text variant="h3" style={{ color: c.text }}>Add Card</Text>
               <Pressable onPress={() => setShowAddCard(false)} hitSlop={8}>
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={24} color={c.text} />
               </Pressable>
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text variant="label" style={styles.fieldLabel}>CARD HOLDER NAME</Text>
+              <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>CARD HOLDER NAME</Text>
               <TextInput
-                style={styles.fieldInput}
+                style={[styles.fieldInput, { backgroundColor: c.background, borderColor: c.border, color: c.text }]}
                 placeholder="John Doe"
                 value={cardName}
                 onChangeText={setCardName}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={c.textMuted}
                 autoCapitalize="words"
               />
             </View>
 
             <View style={styles.fieldGroup}>
               <View style={styles.cardNumberHeader}>
-                <Text variant="label" style={styles.fieldLabel}>CARD NUMBER</Text>
+                <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>CARD NUMBER</Text>
                 {detectedNetwork && (
-                  <View style={styles.networkBadge}>
-                    <Text variant="caption" style={styles.networkText}>{detectedNetwork}</Text>
+                  <View style={[styles.networkBadge, { backgroundColor: c.primaryLight }]}>
+                    <Text variant="caption" style={[styles.networkText, { color: c.primary }]}>{detectedNetwork}</Text>
                   </View>
                 )}
               </View>
               <TextInput
-                style={styles.fieldInput}
+                style={[styles.fieldInput, { backgroundColor: c.background, borderColor: c.border, color: c.text }]}
                 placeholder="0000 0000 0000 0000"
                 value={cardNumber}
                 onChangeText={(t) => setCardNumber(formatCardNumber(t))}
                 keyboardType="number-pad"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={c.textMuted}
                 maxLength={19}
               />
             </View>
 
             <View style={styles.fieldRow}>
               <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text variant="label" style={styles.fieldLabel}>EXPIRE DATE</Text>
+                <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>EXPIRE DATE</Text>
                 <TextInput
-                  style={styles.fieldInput}
+                  style={[styles.fieldInput, { backgroundColor: c.background, borderColor: c.border, color: c.text }]}
                   placeholder="MM/YY"
                   value={expiry}
                   onChangeText={setExpiry}
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={c.textMuted}
                   keyboardType="number-pad"
                   maxLength={5}
                 />
               </View>
               <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text variant="label" style={styles.fieldLabel}>CVC</Text>
+                <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>CVC</Text>
                 <TextInput
-                  style={styles.fieldInput}
+                  style={[styles.fieldInput, { backgroundColor: c.background, borderColor: c.border, color: c.text }]}
                   placeholder="•••"
                   value={cvc}
                   onChangeText={setCvc}
                   keyboardType="number-pad"
                   secureTextEntry
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={c.textMuted}
                   maxLength={4}
                 />
               </View>
             </View>
 
             <Pressable
-              style={styles.addCardSubmit}
+              style={[styles.addCardSubmit, { backgroundColor: c.primary }]}
               onPress={() => {
                 if (!cardName || !cardNumber || !expiry || !cvc) {
                   Alert.alert('Missing Info', 'Please fill in all card details');
@@ -246,16 +254,16 @@ export default function PaymentScreen() {
                 setShowAddCard(false);
               }}
             >
-              <Text variant="body" style={styles.addCardSubmitText}>ADD & MAKE PAYMENT</Text>
+              <Text variant="body" style={[styles.addCardSubmitText, { color: c.textInverse }]}>ADD & MAKE PAYMENT</Text>
             </Pressable>
           </View>
         )}
 
         {/* ========== MOBILE MONEY ========== */}
         {selected === 'mobile' && (
-          <View style={styles.mobileCard}>
+          <View style={[styles.mobileCard, { backgroundColor: c.backgroundSecondary }]}>
             {/* Provider picker */}
-            <Text variant="label" style={[styles.fieldLabel, { marginBottom: spacing.sm }]}>
+            <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted, marginBottom: spacing.sm }]}>
               SELECT PROVIDER
             </Text>
             <View style={styles.providerRow}>
@@ -264,6 +272,7 @@ export default function PaymentScreen() {
                   key={p.id}
                   style={[
                     styles.providerBtn,
+                    { borderColor: c.border, backgroundColor: c.background },
                     mobileProvider === p.id && { backgroundColor: p.color, borderColor: p.color },
                   ]}
                   onPress={() => setMobileProvider(p.id)}
@@ -271,12 +280,12 @@ export default function PaymentScreen() {
                   <Ionicons
                     name="phone-portrait"
                     size={20}
-                    color={mobileProvider === p.id ? p.textColor : colors.textMuted}
+                    color={mobileProvider === p.id ? p.textColor : c.textMuted}
                   />
                   <Text
                     variant="bodySmall"
                     style={[
-                      styles.providerLabel,
+                      styles.providerLabel, { color: c.textSecondary },
                       mobileProvider === p.id && { color: p.textColor, fontWeight: '800' },
                     ]}
                   >
@@ -306,20 +315,20 @@ export default function PaymentScreen() {
 
             {/* Phone number input */}
             <View style={styles.fieldGroup}>
-              <Text variant="label" style={styles.fieldLabel}>PHONE NUMBER</Text>
+              <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>PHONE NUMBER</Text>
               <TextInput
-                style={styles.fieldInput}
+                style={[styles.fieldInput, { backgroundColor: c.background, borderColor: c.border, color: c.text }]}
                 placeholder={`${MOBILE_PROVIDERS.find((p) => p.id === mobileProvider).prefix} 000 000`}
                 value={mobileNumber}
                 onChangeText={setMobileNumber}
                 keyboardType="phone-pad"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={c.textMuted}
                 maxLength={13}
               />
             </View>
             <View style={styles.mmInfoRow}>
-              <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
-              <Text variant="caption" style={styles.mmInfoText}>
+              <Ionicons name="information-circle-outline" size={16} color={c.textMuted} />
+              <Text variant="caption" style={[styles.mmInfoText, { color: c.textMuted }]}>
                 A prompt will be sent to your phone to authorize the payment of UGX {(total * 3700).toLocaleString()}.
               </Text>
             </View>
@@ -328,15 +337,15 @@ export default function PaymentScreen() {
 
         {/* Total */}
         <View style={styles.totalSection}>
-          <Text variant="caption" style={styles.totalLabel}>TOTAL:</Text>
-          <Text variant="h1" style={styles.totalPrice}>UGX {total}</Text>
+          <Text variant="caption" style={[styles.totalLabel, { color: c.textMuted }]}>TOTAL:</Text>
+          <Text variant="h1" style={[styles.totalPrice, { color: c.text }]}>UGX {total}</Text>
         </View>
       </ScrollView>
 
       {/* Bottom button */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base }]}>
-        <Pressable style={styles.payBtn} onPress={handlePayConfirm}>
-          <Text variant="body" style={styles.payBtnText}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background }]}>
+        <Pressable style={[styles.payBtn, { backgroundColor: c.primary }]} onPress={handlePayConfirm}>
+          <Text variant="body" style={[styles.payBtnText, { color: c.textInverse }]}>
             {selected === 'cash' ? 'CONFIRM ORDER' : 'PAY & CONFIRM'}
           </Text>
         </Pressable>
@@ -346,13 +355,13 @@ export default function PaymentScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.backgroundSecondary,
+    width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
   },
   content: { paddingHorizontal: spacing.xl, gap: spacing.xl },
@@ -361,86 +370,82 @@ const styles = StyleSheet.create({
   methodsRow: { flexDirection: 'row', gap: spacing.md },
   methodCard: {
     flex: 1, alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md,
-    borderRadius: radius.lg, backgroundColor: colors.backgroundSecondary,
-    borderWidth: 2, borderColor: 'transparent',
+    borderRadius: radius.lg,
+    borderWidth: 2,
   },
-  methodCardActive: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
   methodIconWrap: {
-    width: 48, height: 48, borderRadius: 24, backgroundColor: colors.background,
+    width: 48, height: 48, borderRadius: 24,
     alignItems: 'center', justifyContent: 'center',
   },
-  methodIconWrapActive: { backgroundColor: colors.primary },
-  methodLabel: { fontSize: 12, color: colors.textMuted, fontWeight: '500' },
-  methodLabelActive: { color: colors.primary, fontWeight: '700' },
+  methodLabel: { fontSize: 12, fontWeight: '500' },
 
   // Cash
   infoCard: {
     alignItems: 'center', padding: spacing.xl, borderRadius: radius.lg,
-    backgroundColor: colors.backgroundSecondary, gap: spacing.md,
+    gap: spacing.md,
   },
   cashIconWrap: {
     width: 64, height: 64, borderRadius: 32, backgroundColor: '#DCFCE7',
     alignItems: 'center', justifyContent: 'center',
   },
   infoTitle: { fontWeight: '700', fontSize: 18 },
-  infoText: { color: colors.textSecondary, textAlign: 'center', lineHeight: 22, fontSize: 14 },
+  infoText: { textAlign: 'center', lineHeight: 22, fontSize: 14 },
 
   // Card visual
   cardVisual: {
-    backgroundColor: colors.splashDark, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg,
+    borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg,
   },
   cardRow1: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   cardBrand: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
   cardNumberDisplay: {
-    color: colors.textInverse, fontSize: 20, fontWeight: '600', letterSpacing: 2,
+    fontSize: 20, fontWeight: '600', letterSpacing: 2,
   },
   cardRow3: { flexDirection: 'row', justifyContent: 'space-between' },
   cardSmallLabel: { color: 'rgba(255,255,255,0.35)', fontSize: 10, letterSpacing: 0.5, marginBottom: 2 },
-  cardSmallValue: { color: colors.textInverse, fontWeight: '500', fontSize: 14 },
+  cardSmallValue: { fontWeight: '500', fontSize: 14 },
   addNewBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1.5,
-    borderColor: colors.primary, borderStyle: 'dashed',
+    borderStyle: 'dashed',
   },
-  addNewText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
+  addNewText: { fontWeight: '700', fontSize: 14 },
 
   // Card form
   cardForm: {
-    borderRadius: radius.lg, backgroundColor: colors.backgroundSecondary, padding: spacing.xl, gap: spacing.lg,
+    borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg,
   },
   cardFormHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   fieldGroup: { gap: spacing.xs },
   fieldLabel: {
-    fontSize: 12, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.5, textTransform: 'uppercase',
+    fontSize: 12, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase',
   },
   fieldInput: {
-    backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1,
     borderRadius: radius.md, paddingVertical: spacing.md, paddingHorizontal: spacing.base,
-    fontSize: 16, color: colors.text,
+    fontSize: 16,
   },
   fieldRow: { flexDirection: 'row', gap: spacing.md },
   cardNumberHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   networkBadge: {
-    backgroundColor: colors.primaryLight, paddingHorizontal: spacing.sm, paddingVertical: 2,
+    paddingHorizontal: spacing.sm, paddingVertical: 2,
     borderRadius: radius.full,
   },
-  networkText: { color: colors.primary, fontWeight: '700', fontSize: 11 },
+  networkText: { fontWeight: '700', fontSize: 11 },
   addCardSubmit: {
-    backgroundColor: colors.primary, paddingVertical: spacing.base, borderRadius: radius.md, alignItems: 'center',
+    paddingVertical: spacing.base, borderRadius: radius.md, alignItems: 'center',
   },
-  addCardSubmitText: { color: colors.textInverse, fontWeight: '700', fontSize: 15 },
+  addCardSubmitText: { fontWeight: '700', fontSize: 15 },
 
   // Mobile Money
   mobileCard: {
-    borderRadius: radius.lg, backgroundColor: colors.backgroundSecondary, padding: spacing.xl, gap: spacing.lg,
+    borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg,
   },
   providerRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm },
   providerBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 2,
-    borderColor: colors.border, backgroundColor: colors.background,
   },
-  providerLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  providerLabel: { fontSize: 13, fontWeight: '600' },
   providerBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingVertical: spacing.base, paddingHorizontal: spacing.xl, borderRadius: radius.md,
@@ -448,21 +453,21 @@ const styles = StyleSheet.create({
   mmInfoRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
   },
-  mmInfoText: { color: colors.textMuted, fontSize: 12, flex: 1, lineHeight: 18 },
+  mmInfoText: { fontSize: 12, flex: 1, lineHeight: 18 },
 
   // Total
   totalSection: { alignItems: 'flex-start' },
-  totalLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0.3 },
-  totalPrice: { fontSize: 32, fontWeight: '800', color: colors.text },
+  totalLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 0.3 },
+  totalPrice: { fontSize: 32, fontWeight: '800' },
 
   // Bottom
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: spacing.xl, paddingTop: spacing.base, backgroundColor: colors.background,
+    paddingHorizontal: spacing.xl, paddingTop: spacing.base,
   },
   payBtn: {
-    backgroundColor: colors.primary, paddingVertical: spacing.base,
+    paddingVertical: spacing.base,
     borderRadius: radius.full, alignItems: 'center',
   },
-  payBtnText: { color: colors.textInverse, fontWeight: '700', fontSize: 16, letterSpacing: 0.5 },
+  payBtnText: { fontWeight: '700', fontSize: 16, letterSpacing: 0.5 },
 });

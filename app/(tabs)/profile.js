@@ -31,7 +31,6 @@ const menuSections = [
   },
   {
     items: [
-      { icon: 'swap-horizontal-outline', label: 'Switch to Chef', route: 'switch_chef' },
       { icon: 'log-out-outline', label: 'Log Out', route: 'logout', isDestructive: true },
     ],
   },
@@ -51,14 +50,6 @@ export default function ProfileScreen() {
     if (item.route === 'logout') {
       logout();
       router.replace('/(auth)/login');
-    } else if (item.route === 'switch_chef') {
-      Alert.alert('Switch Role', 'Switch to Chef mode?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Switch', onPress: () => {
-          login(user, 'chef');
-          router.replace('/(chef)');
-        }},
-      ]);
     } else if (item.route) {
       router.push(item.route);
     }

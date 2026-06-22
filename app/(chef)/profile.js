@@ -23,7 +23,6 @@ const menuSections = [
   },
   {
     items: [
-      { icon: 'swap-horizontal-outline', label: 'Switch to Customer', route: 'switch_role' },
       { icon: 'log-out-outline', label: 'Log Out', route: 'logout', isDestructive: true },
     ],
   },
@@ -44,14 +43,6 @@ export default function ChefProfileScreen() {
         { text: 'Log Out', style: 'destructive', onPress: () => {
           logout();
           router.replace('/(auth)/login');
-        }},
-      ]);
-    } else if (item.route === 'switch_role') {
-      Alert.alert('Switch Role', 'Switch to Customer mode?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Switch', onPress: () => {
-          login(user, 'customer');
-          router.replace('/(tabs)');
         }},
       ]);
     } else {

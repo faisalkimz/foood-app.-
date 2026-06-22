@@ -4,10 +4,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
-import { restaurants, menuItems, categories } from '../../src/services/mock/data';
+import { restaurants, menuItems } from '../../src/services/mock/data';
 import { useCartStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
-import { colors, spacing, radius } from '../../src/theme';
+import { spacing, radius } from '../../src/theme';
 
 export default function RestaurantScreen() {
   const { id } = useLocalSearchParams();
@@ -43,14 +43,14 @@ export default function RestaurantScreen() {
         <Image source={{ uri: restaurant.image }} style={styles.coverImage} />
         <View style={[styles.headerOverlay, { paddingTop: insets.top + spacing.sm }]}>
           <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-            <Ionicons name="arrow-back" size={22} color={colors.text} />
+            <Ionicons name="arrow-back" size={22} color="#1A1A1A" />
           </Pressable>
           <Pressable style={styles.iconBtn} onPress={() => Alert.alert('Options', '', [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Add to Favourites', onPress: () => Alert.alert('❤️ Added', 'Restaurant saved to favourites!') },
             { text: 'Share', onPress: () => Alert.alert('📤 Shared', 'Link copied to clipboard!') },
           ])}>
-            <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
+            <Ionicons name="ellipsis-horizontal" size={22} color="#1A1A1A" />
           </Pressable>
         </View>
       </View>
@@ -116,7 +116,7 @@ export default function RestaurantScreen() {
             {menu.map((item) => (
               <Pressable
                 key={item.id}
-                style={[styles.menuCard, { backgroundColor: c.backgroundSecondary }]}
+                style={[styles.menuCard, { backgroundColor: c.backgroundSecondary, borderColor: c.borderLight }]}
                 onPress={() => router.push(`/food/${item.id}`)}
               >
                 <Image source={{ uri: item.image }} style={styles.menuImage} />
@@ -132,7 +132,7 @@ export default function RestaurantScreen() {
                   </Text>
                 </View>
                 <Pressable
-                  style={styles.addBtn}
+                  style={[styles.addBtn, { backgroundColor: c.primary }]}
                   onPress={() => {
                     const result = addItem(item);
                     if (result?.error) {
@@ -143,7 +143,7 @@ export default function RestaurantScreen() {
                   }}
                   hitSlop={8}
                 >
-                  <Ionicons name="add" size={20} color={colors.textInverse} />
+                  <Ionicons name="add" size={20} color={c.textInverse} />
                 </Pressable>
               </Pressable>
             ))}
@@ -157,7 +157,6 @@ export default function RestaurantScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   notFound: {
     textAlign: 'center',
@@ -195,7 +194,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   viewLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -205,7 +203,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   description: {
-    color: colors.textSecondary,
     lineHeight: 20,
     fontSize: 13,
   },
@@ -234,21 +231,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.base,
     borderRadius: radius.full,
-    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tagActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   tagText: {
-    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '500',
-  },
-  tagTextActive: {
-    color: colors.textInverse,
   },
   menuSection: {
     paddingHorizontal: spacing.xl,
@@ -263,11 +250,9 @@ const styles = StyleSheet.create({
   },
   menuCard: {
     width: '47%',
-    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.borderLight,
   },
   menuImage: {
     width: '100%',
@@ -282,7 +267,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   menuPrice: {
-    color: colors.primary,
     fontWeight: '700',
     fontSize: 15,
     marginTop: spacing.xs,
@@ -294,7 +278,6 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,5 +1,5 @@
 import { View, StyleSheet, Text as RNText } from 'react-native';
-import { colors } from '../../theme';
+import { useTheme } from '../../providers/ThemeProvider';
 
 /**
  * Stylised "Food" wordmark matching the Figma design.
@@ -9,7 +9,8 @@ import { colors } from '../../theme';
  * @param {number} size – base font size (default 42)
  */
 export default function FoodLogo({ variant = 'light', size = 42 }) {
-  const textColor = variant === 'dark' ? colors.textInverse : colors.text;
+  const c = useTheme();
+  const textColor = variant === 'dark' ? c.textInverse : c.text;
   const bowlSize = size * 0.48;
   const bowlOffset = size * 0.12; // align bowls with text baseline
 
@@ -29,13 +30,14 @@ export default function FoodLogo({ variant = 'light', size = 42 }) {
                 width: bowlSize,
                 height: bowlSize,
                 borderRadius: bowlSize / 2,
+                backgroundColor: c.primary,
               },
             ]}
           />
           {/* Steam lines */}
           <View style={styles.steamWrap}>
-            <View style={[styles.steam, { height: bowlSize * 0.28 }]} />
-            <View style={[styles.steam, { height: bowlSize * 0.35 }]} />
+            <View style={[styles.steam, { height: bowlSize * 0.28, backgroundColor: c.primary }]} />
+            <View style={[styles.steam, { height: bowlSize * 0.35, backgroundColor: c.primary }]} />
           </View>
         </View>
 
@@ -48,6 +50,7 @@ export default function FoodLogo({ variant = 'light', size = 42 }) {
                 width: bowlSize,
                 height: bowlSize,
                 borderRadius: bowlSize / 2,
+                backgroundColor: c.primary,
               },
             ]}
           />
@@ -78,7 +81,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
   bowl: {
-    backgroundColor: colors.primary,
+    // backgroundColor set inline via useTheme
   },
   steamWrap: {
     position: 'absolute',
@@ -89,7 +92,7 @@ const styles = StyleSheet.create({
   steam: {
     width: 3,
     borderRadius: 2,
-    backgroundColor: colors.primary,
     opacity: 0.7,
+    // backgroundColor set inline via useTheme
   },
 });
