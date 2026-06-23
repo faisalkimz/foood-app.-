@@ -3,7 +3,7 @@ import { View, StyleSheet, Image, ScrollView, Pressable, Alert, ActivityIndicato
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
+import { Text, Skeleton } from '../../src/components/ui';
 import { supabase } from '../../src/services/supabase';
 import { useCartStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
@@ -57,8 +57,8 @@ export default function FoodDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, styles.center, { backgroundColor: c.background }]}>
-        <ActivityIndicator size="large" color={c.primary} />
+      <View style={[styles.container, { backgroundColor: c.background }]}>
+        <Skeleton.FoodDetail />
       </View>
     );
   }

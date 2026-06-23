@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useMemo } from 'react';
 import { Header, SearchBar, RestaurantCard } from '../../src/components/shared';
-import { Text } from '../../src/components/ui';
+import { Text, Skeleton } from '../../src/components/ui';
 import { fetchRestaurants } from '../../src/services/restaurantService';
 import { useTheme } from '../../src/providers/ThemeProvider';
 import { spacing, radius } from '../../src/theme';
@@ -178,7 +178,10 @@ export default function SearchScreen() {
               <View style={styles.section}>
                 <Text variant="h3" style={styles.sectionTitle}>Top Rated</Text>
                 {isLoadingData ? (
-                  <ActivityIndicator size="small" color={c.primary} />
+                  <View style={{ gap: 12, paddingVertical: 8 }}>
+                    <Skeleton.RestaurantCard />
+                    <Skeleton.RestaurantCard />
+                  </View>
                 ) : suggestedRestaurants.length === 0 ? (
                   <Text variant="bodySmall" style={{ color: c.textMuted }}>No restaurants available yet.</Text>
                 ) : suggestedRestaurants.map((r) => (

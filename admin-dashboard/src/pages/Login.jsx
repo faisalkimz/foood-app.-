@@ -17,7 +17,6 @@ export default function Login({ onLogin }) {
     setLoading(true);
     try {
       const { token, admin } = await adminApi.login(email.trim().toLowerCase(), password);
-      // Persist token in sessionStorage so page refreshes don't log out
       sessionStorage.setItem('admin_token', token);
       onLogin(admin, token);
     } catch (err) {
@@ -41,9 +40,9 @@ export default function Login({ onLogin }) {
             <span className="auth-brand-name">FoodOrder</span>
           </div>
 
-          <h1 className="auth-heading">Admin Sign In</h1>
+          <h1 className="auth-heading">Welcome Back</h1>
           <p className="auth-subheading">
-            Access restricted to <strong>admin@admin.com</strong> only
+            Sign in to your admin dashboard
           </p>
 
           {error && (
@@ -67,7 +66,7 @@ export default function Login({ onLogin }) {
                 type="email"
                 value={email}
                 onChange={e => { setEmail(e.target.value); setError(''); }}
-                placeholder="admin@admin.com"
+                placeholder="you@example.com"
                 autoFocus
               />
             </div>

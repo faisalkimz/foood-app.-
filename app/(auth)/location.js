@@ -15,6 +15,7 @@ export default function LocationScreen() {
   const [detecting, setDetecting] = useState(false);
 
   const handleAccessLocation = async () => {
+    if (detecting) return; // Prevent double-tap
     setDetecting(true);
     try {
       // 1. Request permission
@@ -25,7 +26,7 @@ export default function LocationScreen() {
           'We need location access to find restaurants near you. You can enable it later in Settings.',
           [
             { text: 'Skip', onPress: () => handleSkip() },
-            { text: 'Try Again', onPress: () => handleAccessLocation() },
+            { text: 'Try Again', onPress: () => { setDetecting(false); handleAccessLocation(); } },
           ]
         );
         setDetecting(false);
@@ -50,7 +51,7 @@ export default function LocationScreen() {
         postalCode: geo?.postalCode || '',
       };
 
-      // 4. Save to store + AsyncStorage
+      // 4. Save to store + Supabase (setLocation won't create duplicates now)
       await setLocation(address, { latitude, longitude });
 
       // 5. Navigate to home
@@ -61,7 +62,7 @@ export default function LocationScreen() {
         'Could not detect your location. Please try again or enter it manually.',
         [
           { text: 'Skip', onPress: () => handleSkip() },
-          { text: 'Retry', onPress: () => handleAccessLocation() },
+          { text: 'Retry', onPress: () => { setDetecting(false); handleAccessLocation(); } },
         ]
       );
     } finally {

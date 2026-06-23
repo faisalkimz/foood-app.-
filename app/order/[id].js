@@ -214,6 +214,22 @@ export default function TrackOrderScreen() {
                 Ordered {formatDate(order.createdAt)}
               </Text>
             </View>
+            {!isDelivered && !isCancelled && (
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Pressable
+                  onPress={() => router.push({ pathname: '/order/chat', params: { orderId: order.id } })}
+                  style={[styles.contactBtn, { backgroundColor: c.primary + '15' }]}
+                >
+                  <Ionicons name="chatbubble" size={16} color={c.primary} />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push({ pathname: '/order/call', params: { orderId: order.id } })}
+                  style={[styles.contactBtn, { backgroundColor: '#10B981' + '15' }]}
+                >
+                  <Ionicons name="call" size={16} color="#10B981" />
+                </Pressable>
+              </View>
+            )}
           </View>
         </View>
 
@@ -370,4 +386,7 @@ const styles = StyleSheet.create({
   // Home button
   homeBtn: { paddingVertical: spacing.base, borderRadius: radius.full, alignItems: 'center', marginTop: spacing.md },
   homeBtnText: { color: '#FFF', fontWeight: '700', fontSize: 16, letterSpacing: 0.5 },
+
+  // Contact buttons
+  contactBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 });

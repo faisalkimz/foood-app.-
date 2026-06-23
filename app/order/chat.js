@@ -2,38 +2,57 @@ import { useState, useRef, useEffect } from 'react';
 import {
   View, StyleSheet, Pressable, TextInput, FlatList, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
 import { useTheme } from '../../src/providers/ThemeProvider';
+import { supabase } from '../../src/services/supabase';
 import { spacing, radius } from '../../src/theme';
-
-const DRIVER_NAME = 'Robert Fox';
-
-const initialMessages = [
-  { id: '1', text: 'Are you coming?', sender: 'me', time: '8:10pm' },
-  { id: '2', text: 'Hey, Congratulation for order', sender: 'driver', time: '8:11pm' },
-  { id: '3', text: 'Hey, Where are you now?', sender: 'me', time: '8:11pm' },
-  { id: '4', text: "I'm Coming, just wait ...", sender: 'driver', time: '8:12pm' },
-  { id: '5', text: 'Hurry Up, Man', sender: 'me', time: '8:12pm' },
-];
 
 export default function ChatScreen() {
   const router = useRouter();
+  const { orderId } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const c = useTheme();
   const flatListRef = useRef(null);
 
-  const [messages, setMessages] = useState(initialMessages);
+  const [contactName, setContactName] = useState('Restaurant');
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
 
+  // Fetch restaurant name from order
   useEffect(() => {
-    // Scroll to bottom on mount
+    if (!orderId) return;
+    (async () => {
+      try {
+        const { data: order } = await supabase
+          .from('orders')
+          .select('restaurants ( name )')
+          .eq('id', orderId)
+          .single();
+        if (order?.restaurants?.name) {
+          setContactName(order.restaurants.name);
+          // Set initial messages with restaurant name
+          setMessages([
+            { id: '1', text: `Hi! Your order from ${order.restaurants.name} is being prepared.`, sender: 'restaurant', time: formatTime() },
+            { id: '2', text: "We'll update you when it's ready! 🍳", sender: 'restaurant', time: formatTime() },
+          ]);
+        }
+      } catch {
+        // fallback
+        setMessages([
+          { id: '1', text: 'Hi! How can we help you?', sender: 'restaurant', time: formatTime() },
+        ]);
+      }
+    })();
+  }, [orderId]);
+
+  useEffect(() => {
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: false });
     }, 200);
-  }, []);
+  }, [messages.length]);
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -41,18 +60,25 @@ export default function ChatScreen() {
       id: Date.now().toString(),
       text: input.trim(),
       sender: 'me',
-      time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      time: formatTime(),
     };
     setMessages((prev) => [...prev, newMsg]);
     setInput('');
 
-    // Simulate driver reply after 1.5s
+    // Simulate restaurant reply after 1.5s
     setTimeout(() => {
+      const replies = [
+        "Your order is being prepared with care! 👨‍🍳",
+        "We'll have it ready soon!",
+        "Thank you for your patience! 🙏",
+        "Almost done! Your food will be ready shortly.",
+        "Great question! Let me check for you.",
+      ];
       const reply = {
         id: (Date.now() + 1).toString(),
-        text: "OK, I'll be there soon! 🚗",
-        sender: 'driver',
-        time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        text: replies[Math.floor(Math.random() * replies.length)],
+        sender: 'restaurant',
+        time: formatTime(),
       };
       setMessages((prev) => [...prev, reply]);
     }, 1500);
@@ -66,7 +92,7 @@ export default function ChatScreen() {
           styles.bubble,
           isMe
             ? [styles.bubbleMe, { backgroundColor: c.primary }]
-            : [styles.bubbleDriver, { backgroundColor: c.backgroundSecondary }],
+            : [styles.bubbleRestaurant, { backgroundColor: c.backgroundSecondary }],
         ]}>
           <Text variant="body" style={[
             styles.bubbleText,
@@ -94,13 +120,16 @@ export default function ChatScreen() {
           <Ionicons name="arrow-back" size={22} color={c.text} />
         </Pressable>
         <View style={styles.headerCenter}>
-          <Text variant="h3" style={{ color: c.text }}>{DRIVER_NAME}</Text>
+          <Text variant="h3" style={{ color: c.text }}>{contactName}</Text>
           <View style={styles.onlineRow}>
             <View style={styles.onlineDot} />
             <Text variant="caption" style={{ fontSize: 11 }}>Online</Text>
           </View>
         </View>
-        <Pressable style={[styles.headerAction, { backgroundColor: c.backgroundSecondary }]} onPress={() => router.push('/order/call')}>
+        <Pressable
+          style={[styles.headerAction, { backgroundColor: c.backgroundSecondary }]}
+          onPress={() => router.push({ pathname: '/order/call', params: { orderId } })}
+        >
           <Ionicons name="call" size={18} color={c.primary} />
         </Pressable>
       </View>
@@ -137,6 +166,14 @@ export default function ChatScreen() {
   );
 }
 
+function formatTime() {
+  const d = new Date();
+  const h = d.getHours();
+  const m = d.getMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'pm' : 'am';
+  return `${h % 12 || 12}:${m}${ampm}`;
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
@@ -158,7 +195,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
   },
   bubbleMe: { borderBottomRightRadius: 4 },
-  bubbleDriver: { borderBottomLeftRadius: 4 },
+  bubbleRestaurant: { borderBottomLeftRadius: 4 },
   bubbleText: { fontSize: 15, lineHeight: 21 },
   timeText: { fontSize: 10, marginTop: 4 },
   timeTextMe: { textAlign: 'right' },

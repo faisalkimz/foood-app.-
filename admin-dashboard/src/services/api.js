@@ -50,6 +50,18 @@ export const adminApi = {
   // ─── Users ──────────────────────────────────────────────────────────────────
   getUsers: (token) => request('/api/admin/users', {}, token),
 
-  // ─── Stats ──────────────────────────────────────────────────────────────────
+  // ─── Orders ─────────────────────────────────────────────────────────────────
+  getOrders: (token) => request('/api/admin/orders', {}, token),
+
+  updateOrderStatus: (token, id, status) =>
+    request(`/api/admin/orders/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }, token),
+
+  // ─── Stats & Analytics ──────────────────────────────────────────────────────
   getStats: (token) => request('/api/admin/stats', {}, token),
+
+  // ─── Activity ───────────────────────────────────────────────────────────────
+  getActivity: (token) => request('/api/admin/activity', {}, token),
 };

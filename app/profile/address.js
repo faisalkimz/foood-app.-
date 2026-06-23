@@ -58,11 +58,15 @@ function AddressForm({ initial, onSave, onCancel }) {
     }
   };
 
+  const [saving, setSaving] = useState(false);
+
   const handleSave = () => {
+    if (saving) return;
     if (!street && !name && !city) {
       showToast({ type: 'warning', message: 'Please enter at least a street or city.' });
       return;
     }
+    setSaving(true);
     onSave({ label, icon, name, street, city, region, country, note });
   };
 
@@ -199,8 +203,8 @@ function AddressForm({ initial, onSave, onCancel }) {
         <Pressable style={[styles.cancelBtn, { borderColor: c.border }]} onPress={onCancel}>
           <Text variant="body" style={{ color: c.textSecondary, fontWeight: '600' }}>Cancel</Text>
         </Pressable>
-        <Pressable style={[styles.saveBtn, { backgroundColor: c.primary }]} onPress={handleSave}>
-          <Text variant="body" style={styles.saveBtnText}>Save Address</Text>
+        <Pressable style={[styles.saveBtn, { backgroundColor: c.primary, opacity: saving ? 0.6 : 1 }]} onPress={handleSave} disabled={saving}>
+          <Text variant="body" style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save Address'}</Text>
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -232,9 +236,13 @@ export default function AddressScreen() {
   };
 
   const handleAdd = async (data) => {
-    await addAddress(data, null, true);
-    showToast({ type: 'success', message: `${data.label} address saved!` });
-    setView('list');
+    try {
+      await addAddress(data, null, true);
+      showToast({ type: 'success', message: `${data.label} address saved!` });
+      setView('list');
+    } catch (err) {
+      showToast({ type: 'error', message: err.message || 'Failed to save.' });
+    }
   };
 
   const handleEdit = async (data) => {

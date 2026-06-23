@@ -6,7 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
+import { Text, Skeleton } from '../../src/components/ui';
 import { SearchBar, RestaurantCard } from '../../src/components/shared';
 import { useAuthStore, useLocationStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
@@ -195,14 +195,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Loading */}
-        {isLoading && (
-          <View style={styles.centerState}>
-            <ActivityIndicator size="large" color={c.primary} />
-            <Text variant="bodySmall" style={{ color: c.textMuted, marginTop: spacing.md }}>
-              Finding restaurants near you…
-            </Text>
-          </View>
-        )}
+        {isLoading && <Skeleton.Home />}
 
         {/* Error */}
         {!isLoading && error && (

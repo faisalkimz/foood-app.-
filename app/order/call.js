@@ -1,19 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Pressable, Image, Animated, ImageBackground, Platform, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Text } from '../../src/components/ui';
+import { supabase } from '../../src/services/supabase';
 import { spacing } from '../../src/theme';
-
-const DRIVER_NAME = 'Robert Fox';
-const DRIVER_PHOTO = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600';
 
 export default function CallingScreen() {
   const router = useRouter();
+  const { orderId } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
 
+  const [contactName, setContactName] = useState('Restaurant');
+  const [contactPhoto, setContactPhoto] = useState(null);
   const [status, setStatus] = useState('Calling...');
   const [callTime, setCallTime] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
@@ -21,6 +22,26 @@ export default function CallingScreen() {
 
   const pulseAnim = useRef(new Animated.Value(0.3)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Fetch restaurant info from the order
+  useEffect(() => {
+    if (!orderId) return;
+    (async () => {
+      try {
+        const { data: order } = await supabase
+          .from('orders')
+          .select('restaurants ( name, image_url )')
+          .eq('id', orderId)
+          .single();
+        if (order?.restaurants) {
+          setContactName(order.restaurants.name);
+          setContactPhoto(order.restaurants.image_url);
+        }
+      } catch {
+        // fallback to defaults
+      }
+    })();
+  }, [orderId]);
 
   useEffect(() => {
     // Fade in
@@ -48,8 +69,10 @@ export default function CallingScreen() {
 
   const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
+  const avatarUri = contactPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(contactName)}&background=FF6B35&color=fff&size=200`;
+
   return (
-    <ImageBackground source={{ uri: DRIVER_PHOTO }} style={styles.bg} blurRadius={Platform.OS === 'android' ? 25 : 0}>
+    <ImageBackground source={{ uri: avatarUri }} style={styles.bg} blurRadius={Platform.OS === 'android' ? 25 : 0}>
       {/* iOS blur overlay */}
       {Platform.OS === 'ios' && (
         <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
@@ -65,10 +88,10 @@ export default function CallingScreen() {
           <View style={styles.avatarContainer}>
             <Animated.View style={[styles.pulseRing, styles.pulseOuter, { opacity: pulseAnim }]} />
             <Animated.View style={[styles.pulseRing, styles.pulseMiddle, { opacity: pulseAnim }]} />
-            <Image source={{ uri: DRIVER_PHOTO }} style={styles.avatar} />
+            <Image source={{ uri: avatarUri }} style={styles.avatar} />
           </View>
 
-          <Text style={styles.name}>{DRIVER_NAME}</Text>
+          <Text style={styles.name}>{contactName}</Text>
           <Text style={styles.statusText}>
             {status === 'connected' ? fmt(callTime) : status}
           </Text>

@@ -26,7 +26,7 @@ function AppStack() {
     // 2. Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
           try {
             const profile = await getProfile(session.user.id);
             login({ ...session.user, ...profile }, profile.role || 'customer');
@@ -34,6 +34,8 @@ function AppStack() {
             initializeLocation();
           } catch {
             // Profile might not exist yet (new signup), let verification handle it
+            // But still try loading addresses in case they exist
+            initializeLocation();
           }
         } else if (event === 'SIGNED_OUT') {
           logout();

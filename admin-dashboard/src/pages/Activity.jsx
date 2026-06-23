@@ -1,16 +1,38 @@
-import { useState } from 'react';
-import { activityLog } from '../data';
+import { useState, useEffect } from 'react';
+import { adminApi } from '../services/api';
 import { Icons } from '../components/Icons';
 
-const TYPE_ICONS = { order: Icons.box(16), chef: Icons.chef(16), user: Icons.user(16), menu: Icons.plate(16), payment: Icons.creditCard(16), review: Icons.star(16) };
-const TYPE_BG = { order: '#EFF6FF', chef: '#F0FDF4', user: '#F5F3FF', menu: '#FFFBEB', payment: '#F0FDF4', review: '#FFF7ED' };
-const TYPE_LABELS = { order: 'Orders', chef: 'Chefs', user: 'Users', menu: 'Menu', payment: 'Payments', review: 'Reviews' };
-
-export default function Activity({ searchQuery }) {
+export default function Activity({ searchQuery, token }) {
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
-  const types = [...new Set(activityLog.map(a => a.type))];
 
-  const filtered = activityLog.filter((a) => {
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await adminApi.getActivity(token);
+        setActivities(res.activities || []);
+      } catch (err) {
+        console.error('Activity load error:', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
+
+  const activityIcons = {
+    order: Icons.box(16), chef: Icons.chef(16), user: Icons.user(16),
+    menu: Icons.plate(16), payment: Icons.creditCard(16), review: Icons.star(16),
+    cancel: Icons.x(16),
+  };
+
+  const activityColors = {
+    order: '#EFF6FF', chef: '#F0FDF4', user: '#F5F3FF',
+    menu: '#FFFBEB', payment: '#F0FDF4', review: '#FFFBEB',
+    cancel: '#FEF2F2',
+  };
+
+  const filtered = activities.filter((a) => {
     const matchesSearch = !searchQuery ||
       a.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.detail.toLowerCase().includes(searchQuery.toLowerCase());
@@ -18,53 +40,52 @@ export default function Activity({ searchQuery }) {
     return matchesSearch && matchesFilter;
   });
 
-  const typeCounts = {};
-  activityLog.forEach(a => { typeCounts[a.type] = (typeCounts[a.type] || 0) + 1; });
+  const types = [...new Set(activities.map((a) => a.type))];
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+        <div className="auth-loader" style={{ width: 32, height: 32, borderWidth: 3 }} />
+      </div>
+    );
+  }
 
   return (
     <div>
-      {/* Type cards */}
-      <div className="stats-grid" style={{ gridTemplateColumns: `repeat(${types.length}, 1fr)`, marginBottom: 16 }}>
-        {types.map(type => (
-          <div className="stat-card" key={type}
-            style={{ cursor: 'pointer', borderColor: filter === type ? 'var(--primary)' : undefined }}
-            onClick={() => setFilter(filter === type ? 'all' : type)}
-          >
-            <div className="stat-icon-wrap" style={{ background: TYPE_BG[type] }}>{TYPE_ICONS[type]}</div>
-            <div className="stat-info">
-              <div className="stat-value" style={{ fontSize: 18 }}>{typeCounts[type]}</div>
-              <div className="stat-label">{TYPE_LABELS[type]}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="filter-bar">
-        <button className={`filter-pill ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All ({activityLog.length})</button>
-        {types.map(type => (
-          <button key={type} className={`filter-pill ${filter === type ? 'active' : ''}`} onClick={() => setFilter(type)}>
-            {TYPE_ICONS[type]} {TYPE_LABELS[type]} ({typeCounts[type]})
+      {/* Filter pills */}
+      <div className="filter-bar" style={{ marginBottom: 16 }}>
+        <button className={`filter-pill ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
+          All ({activities.length})
+        </button>
+        {types.map((t) => (
+          <button key={t} className={`filter-pill ${filter === t ? 'active' : ''}`} onClick={() => setFilter(t)}>
+            {t.charAt(0).toUpperCase() + t.slice(1)} ({activities.filter(a => a.type === t).length})
           </button>
         ))}
       </div>
 
+      {/* Activity feed */}
       <div className="card">
-        <div className="card-header"><h3>Activity Log ({filtered.length})</h3></div>
+        <div className="card-header">
+          <h3>Activity Feed ({filtered.length})</h3>
+        </div>
         <div className="activity-feed">
-          {filtered.map(a => (
+          {filtered.length > 0 ? filtered.map((a) => (
             <div className="activity-item" key={a.id}>
-              <div className="activity-icon" style={{ background: TYPE_BG[a.type] }}>{TYPE_ICONS[a.type]}</div>
+              <div className="activity-icon" style={{ background: activityColors[a.type] || '#F5F7FA' }}>
+                {activityIcons[a.type] || Icons.box(16)}
+              </div>
               <div className="activity-content">
                 <div className="activity-action">{a.action}</div>
                 <div className="activity-detail">{a.detail}</div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                <div className="activity-time">{a.time}</div>
-                <span className={`badge badge-${a.type === 'order' ? 'new' : a.type === 'chef' ? 'active' : 'pending'}`} style={{ fontSize: 10 }}>{TYPE_LABELS[a.type]}</span>
-              </div>
+              <div className="activity-time">{a.time}</div>
             </div>
-          ))}
-          {filtered.length === 0 && <div className="empty-state"><p>No activities found</p></div>}
+          )) : (
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+              <p>No activity found</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

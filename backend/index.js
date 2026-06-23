@@ -29,7 +29,7 @@ app.use(express.json());
 function requireAdmin(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
+    return res.status(401).json({ error: 'Authentication required' });
   }
   try {
     const token = authHeader.split(' ')[1];
@@ -37,7 +37,7 @@ function requireAdmin(req, res, next) {
     req.admin = decoded;
     next();
   } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    return res.status(401).json({ error: 'Session expired. Please sign in again.' });
   }
 }
 
@@ -57,17 +57,17 @@ app.post('/api/admin/login', (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+    return res.status(400).json({ error: 'Please enter your email and password.' });
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@admin.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@2020!';
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
 
   if (
     email.trim().toLowerCase() !== adminEmail.toLowerCase() ||
     password !== adminPassword
   ) {
-    return res.status(401).json({ error: 'Invalid credentials. Only admin@admin.com can access the dashboard.' });
+    return res.status(401).json({ error: 'Invalid email or password.' });
   }
 
   const admin = { email: adminEmail, name: 'Super Admin', role: 'super_admin' };
@@ -93,7 +93,6 @@ app.get('/api/admin/chefs', requireAdmin, async (req, res) => {
 
     if (error) throw error;
 
-    // Shape the data for the dashboard
     const chefs = data.map((p) => ({
       id: p.id,
       name: p.full_name || 'Unnamed Chef',
@@ -254,8 +253,92 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
 });
 
 /**
+ * GET /api/admin/orders
+ * Returns all orders with customer + restaurant info
+ */
+app.get('/api/admin/orders', requireAdmin, async (req, res) => {
+  try {
+    const { data: orders, error } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        id, status, total_amount, delivery_fee, notes, created_at, updated_at,
+        profiles!orders_customer_id_fkey ( id, full_name, email, avatar_url ),
+        restaurants ( id, name, chef_id,
+          profiles!restaurants_chef_id_fkey ( full_name )
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    // Fetch order_items for each order
+    const orderIds = (orders || []).map((o) => o.id);
+    const { data: allItems } = orderIds.length > 0
+      ? await supabaseAdmin.from('order_items').select('order_id, name, quantity, unit_price').in('order_id', orderIds)
+      : { data: [] };
+
+    const itemsMap = {};
+    (allItems || []).forEach((item) => {
+      if (!itemsMap[item.order_id]) itemsMap[item.order_id] = [];
+      itemsMap[item.order_id].push(item);
+    });
+
+    const mapped = (orders || []).map((o) => {
+      const items = itemsMap[o.id] || [];
+      // Map DB status to dashboard status
+      const statusMap = {
+        pending: 'new', confirmed: 'preparing', preparing: 'preparing',
+        ready: 'ready', delivering: 'on_the_way', delivered: 'delivered', cancelled: 'cancelled',
+      };
+      return {
+        id: o.id.slice(0, 8).toUpperCase(),
+        fullId: o.id,
+        customer: o.profiles?.full_name || 'Unknown',
+        customerAvatar: o.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(o.profiles?.full_name || 'U')}&background=4ECDC4&color=fff`,
+        restaurant: o.restaurants?.name || 'Unknown',
+        chef: o.restaurants?.profiles?.full_name || '—',
+        items: items.map((i) => `${i.quantity}x ${i.name}`),
+        total: parseFloat(o.total_amount || 0),
+        status: statusMap[o.status] || o.status,
+        dbStatus: o.status,
+        date: formatDateTime(o.created_at),
+        paymentMethod: 'Cash',
+        deliveryTime: o.status === 'delivered' ? '~30 min' : '—',
+      };
+    });
+
+    res.json({ orders: mapped });
+  } catch (err) {
+    console.error('GET /orders error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PATCH /api/admin/orders/:id
+ * Body: { status: 'pending'|'confirmed'|'preparing'|'ready'|'delivering'|'delivered'|'cancelled' }
+ */
+app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    const { error } = await supabaseAdmin
+      .from('orders')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) throw error;
+    res.json({ message: `Order updated to ${status}` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * GET /api/admin/stats
- * Dashboard overview stats
+ * Dashboard overview stats — all real from Supabase
  */
 app.get('/api/admin/stats', requireAdmin, async (req, res) => {
   try {
@@ -263,26 +346,151 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
       { count: totalUsers },
       { count: totalChefs },
       { count: totalOrders },
-      { data: revenueData },
+      { data: allOrdersData },
     ] = await Promise.all([
       supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'customer'),
       supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'chef'),
       supabaseAdmin.from('orders').select('*', { count: 'exact', head: true }),
-      supabaseAdmin.from('orders').select('total_amount').eq('payment_status', 'paid'),
+      supabaseAdmin.from('orders').select('total_amount, status, created_at').neq('status', 'cancelled'),
     ]);
 
-    const totalRevenue = revenueData?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+    const totalRevenue = (allOrdersData || []).reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
+
+    // Today's stats
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayOrders = (allOrdersData || []).filter((o) => o.created_at?.startsWith(todayStr));
+    const todayRevenue = todayOrders.reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
+
+    // Weekly revenue breakdown
+    const now = new Date();
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const revenueByDay = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayOrders = (allOrdersData || []).filter((o) => o.created_at?.startsWith(dateStr));
+      revenueByDay.push({
+        day: dayNames[d.getDay()],
+        amount: dayOrders.reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0),
+      });
+    }
+
+    // Orders by status
+    const { data: statusData } = await supabaseAdmin.from('orders').select('status');
+    const ordersByStatus = { new: 0, preparing: 0, ready: 0, on_the_way: 0, delivered: 0, cancelled: 0 };
+    const statusMap = { pending: 'new', confirmed: 'preparing', preparing: 'preparing', ready: 'ready', delivering: 'on_the_way', delivered: 'delivered', cancelled: 'cancelled' };
+    (statusData || []).forEach((o) => {
+      const mapped = statusMap[o.status] || o.status;
+      if (ordersByStatus[mapped] !== undefined) ordersByStatus[mapped]++;
+    });
 
     res.json({
       totalUsers: totalUsers || 0,
       totalChefs: totalChefs || 0,
       totalOrders: totalOrders || 0,
       totalRevenue,
+      todayOrders: todayOrders.length,
+      todayRevenue,
+      revenueByDay,
+      ordersByStatus,
     });
   } catch (err) {
+    console.error('GET /stats error:', err);
     res.status(500).json({ error: err.message });
   }
 });
+
+/**
+ * GET /api/admin/activity
+ * Real activity log from recent orders + profiles
+ */
+app.get('/api/admin/activity', requireAdmin, async (req, res) => {
+  try {
+    // Fetch recent orders as activity
+    const { data: recentOrders } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        id, status, total_amount, created_at, updated_at,
+        profiles!orders_customer_id_fkey ( full_name ),
+        restaurants ( name )
+      `)
+      .order('updated_at', { ascending: false })
+      .limit(20);
+
+    // Fetch recent user signups
+    const { data: recentUsers } = await supabaseAdmin
+      .from('profiles')
+      .select('id, full_name, role, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    const activities = [];
+
+    // Add order activities
+    (recentOrders || []).forEach((o) => {
+      const statusActions = {
+        pending: 'New order placed',
+        confirmed: 'Order confirmed',
+        preparing: 'Order being prepared',
+        ready: 'Order ready for pickup',
+        delivering: 'Order out for delivery',
+        delivered: 'Order delivered',
+        cancelled: 'Order cancelled',
+      };
+
+      activities.push({
+        id: `order-${o.id}`,
+        action: statusActions[o.status] || 'Order updated',
+        detail: `${o.profiles?.full_name || 'Customer'} — ${o.restaurants?.name || 'Restaurant'} — UGX ${parseFloat(o.total_amount || 0).toLocaleString()}`,
+        type: o.status === 'cancelled' ? 'cancel' : 'order',
+        time: timeAgo(o.updated_at || o.created_at),
+        sortDate: new Date(o.updated_at || o.created_at).getTime(),
+      });
+    });
+
+    // Add user signup activities
+    (recentUsers || []).forEach((u) => {
+      activities.push({
+        id: `user-${u.id}`,
+        action: u.role === 'chef' ? 'Chef registered' : 'User registered',
+        detail: `${u.full_name || 'Unknown'} signed up as ${u.role}`,
+        type: u.role === 'chef' ? 'chef' : 'user',
+        time: timeAgo(u.created_at),
+        sortDate: new Date(u.created_at).getTime(),
+      });
+    });
+
+    // Sort by most recent first
+    activities.sort((a, b) => b.sortDate - a.sortDate);
+
+    res.json({ activities: activities.slice(0, 20) });
+  } catch (err) {
+    console.error('GET /activity error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function timeAgo(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function formatDateTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const h = d.getHours();
+  const m = d.getMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${h % 12 || 12}:${m} ${ampm}`;
+}
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {

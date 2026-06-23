@@ -6,7 +6,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, showToast } from '../../src/components/ui';
+import { Text, Skeleton, showToast } from '../../src/components/ui';
 import { useTheme } from '../../src/providers/ThemeProvider';
 import { fetchMyOrders, cancelOrder } from '../../src/services/orderService';
 import { spacing, radius } from '../../src/theme';
@@ -103,9 +103,7 @@ export default function OrdersScreen() {
 
       {/* Content */}
       {isLoading ? (
-        <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={c.primary} />
-        </View>
+        <Skeleton.Orders />
       ) : (
         <FlatList
           data={orders}

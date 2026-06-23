@@ -97,15 +97,23 @@ export const useLocationStore = create((set, get) => ({
     }
   },
 
+  /** Guard to prevent double-tap duplicate saves */
+  _isSaving: false,
+
   // ─── Address CRUD (all write to Supabase first) ───────────────────────────
 
   /**
    * Add a new delivery address and optionally select it.
+   * Has double-tap protection to prevent duplicates.
    * @param {object} addressData - { label, icon, name, street, city, region, country, postalCode, note }
    * @param {object|null} coords - { latitude, longitude } from GPS
    * @param {boolean} select     - whether to select this address immediately
    */
   addAddress: async (addressData, coords = null, select = true) => {
+    // Prevent double-tap duplicates
+    if (get()._isSaving) return null;
+    set({ _isSaving: true });
+
     try {
       const created = await createAddress(addressData, coords);
 
@@ -128,6 +136,8 @@ export const useLocationStore = create((set, get) => ({
       return created;
     } catch (err) {
       throw new Error(err.message || 'Failed to save address.');
+    } finally {
+      set({ _isSaving: false });
     }
   },
 
@@ -202,15 +212,34 @@ export const useLocationStore = create((set, get) => ({
   },
 
   /**
-   * Legacy helper used by location.js onboarding screen.
-   * Adds address as "Home" and selects it if none exist.
+   * Smart location setter — used by location.js onboarding and silent GPS refresh.
+   * - First time: creates a "Home" address.
+   * - Subsequent calls: updates the currently selected address instead of creating duplicates.
    */
   setLocation: async (addressData, coords) => {
-    const { savedAddresses } = get();
+    const { savedAddresses, selectedAddressId } = get();
+
+    // If we already have a selected address, UPDATE it instead of creating a new one
+    if (savedAddresses.length > 0 && selectedAddressId) {
+      try {
+        await get().updateAddress(selectedAddressId, {
+          ...addressData,
+          latitude: coords?.latitude,
+          longitude: coords?.longitude,
+        });
+        // Update coords in store
+        if (coords) set({ coords });
+        return;
+      } catch {
+        // If update fails, fall through to create
+      }
+    }
+
+    // First time — create a Home address
     const homeData = {
       ...addressData,
-      label: savedAddresses.length === 0 ? 'Home' : (addressData.label || 'Home'),
-      icon: savedAddresses.length === 0 ? 'home-outline' : (addressData.icon || 'home-outline'),
+      label: 'Home',
+      icon: 'home-outline',
     };
     await get().addAddress(homeData, coords, true);
   },
