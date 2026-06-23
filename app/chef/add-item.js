@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Text, showToast } from '../../src/components/ui';
 import { useTheme } from '../../src/providers/ThemeProvider';
 import { spacing, radius } from '../../src/theme';
@@ -19,8 +20,59 @@ export default function AddItemScreen() {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [imageLocal, setImageLocal] = useState(null); // local picked image URI
   const [category, setCategory] = useState('Pizza');
   const [isSaving, setIsSaving] = useState(false);
+
+  const pickImage = () => {
+    Alert.alert('Add Photo', 'Choose how to add a food image', [
+      {
+        text: 'Take Photo', onPress: async () => {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') {
+            showToast({ type: 'warning', message: 'Camera permission needed.' });
+            return;
+          }
+          const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [16, 9],
+            quality: 0.7,
+          });
+          if (!result.canceled) {
+            setImageLocal(result.assets[0].uri);
+            setImageUrl('');
+          }
+        },
+      },
+      {
+        text: 'From Gallery', onPress: async () => {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') {
+            showToast({ type: 'warning', message: 'Gallery permission needed.' });
+            return;
+          }
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [16, 9],
+            quality: 0.7,
+          });
+          if (!result.canceled) {
+            setImageLocal(result.assets[0].uri);
+            setImageUrl('');
+          }
+        },
+      },
+      {
+        text: 'Paste URL', onPress: () => {
+          setImageLocal(null);
+          // User will type in the URL input
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   const handleSave = async () => {
     if (!name.trim() || !price) {
@@ -30,11 +82,23 @@ export default function AddItemScreen() {
     setIsSaving(true);
     try {
       const restaurant = await fetchMyRestaurant();
+      if (!restaurant) {
+        showToast({ type: 'error', message: 'Please set up your restaurant first (Profile → Restaurant Info).' });
+        setIsSaving(false);
+        return;
+      }
+
+      // Determine final image URL
+      let finalImage = imageUrl.trim();
+      if (imageLocal) {
+        finalImage = imageLocal; // Use local URI as-is (works for display)
+      }
+
       await addMenuItem(restaurant.id, {
         name: name.trim(),
         description: description.trim(),
         price: parseFloat(price),
-        image: imageUrl.trim(),
+        image: finalImage,
         category,
         isAvailable: true,
       });
@@ -46,6 +110,8 @@ export default function AddItemScreen() {
       setIsSaving(false);
     }
   };
+
+  const displayImage = imageLocal || (imageUrl.trim().length > 10 ? imageUrl.trim() : null);
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
@@ -62,25 +128,34 @@ export default function AddItemScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Image URL input */}
-        <View style={styles.fieldGroup}>
-          <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>ITEM PHOTO URL</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: c.backgroundSecondary, borderColor: c.border, color: c.text }]}
-            placeholder="https://… (paste image link)"
-            value={imageUrl}
-            onChangeText={setImageUrl}
-            placeholderTextColor={c.textMuted}
-            autoCapitalize="none"
-          />
-          {imageUrl.trim().length > 10 && (
-            <Image
-              source={{ uri: imageUrl.trim() }}
-              style={styles.imagePreview}
-              resizeMode="cover"
-            />
+        {/* Image picker area */}
+        <Pressable
+          onPress={pickImage}
+          style={[
+            styles.imagePicker,
+            { borderColor: c.border, backgroundColor: c.backgroundSecondary },
+          ]}
+        >
+          {displayImage ? (
+            <Image source={{ uri: displayImage }} style={styles.imagePreview} resizeMode="cover" />
+          ) : (
+            <>
+              <Ionicons name="camera-outline" size={36} color={c.textMuted} />
+              <Text variant="bodySmall" style={{ color: c.textMuted, fontWeight: '600' }}>
+                Tap to add food photo
+              </Text>
+              <Text variant="caption" style={{ color: c.textMuted }}>
+                Camera · Gallery · URL
+              </Text>
+            </>
           )}
-        </View>
+          {displayImage && (
+            <View style={styles.imageOverlay}>
+              <Ionicons name="camera" size={20} color="#FFF" />
+              <Text variant="caption" style={{ color: '#FFF', fontWeight: '700' }}>Change</Text>
+            </View>
+          )}
+        </Pressable>
 
         {/* Form */}
         <View style={styles.form}>
@@ -172,11 +247,18 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: spacing.xl, gap: spacing.xl },
   imagePicker: {
-    height: 160, borderRadius: radius.lg, borderWidth: 1.5, borderStyle: 'dashed',
+    height: 180, borderRadius: radius.lg, borderWidth: 1.5, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    overflow: 'hidden',
   },
   imagePreview: {
-    width: '100%', height: 160, borderRadius: radius.md, marginTop: spacing.sm,
+    width: '100%', height: '100%', borderRadius: radius.lg,
+  },
+  imageOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   form: { gap: spacing.lg },
   fieldGroup: { gap: spacing.xs },

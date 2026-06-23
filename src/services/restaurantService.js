@@ -99,14 +99,16 @@ export async function fetchMyRestaurant() {
     .from('restaurants')
     .select('*')
     .eq('chef_id', user.id)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
+  if (!data) return null; // Chef has no restaurant yet
   return rowToRestaurant(data);
 }
 
 /**
- * Update the chef's restaurant info.
+ * Create or update the chef's restaurant info.
+ * If the chef has no restaurant yet, inserts a new one.
  */
 export async function updateMyRestaurant(updates) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -125,15 +127,34 @@ export async function updateMyRestaurant(updates) {
   if (updates.openingHours !== undefined) row.opening_hours = updates.openingHours;
   if (updates.isActive !== undefined)     row.is_active = updates.isActive;
 
-  const { data, error } = await supabase
-    .from('restaurants')
-    .update(row)
-    .eq('chef_id', user.id)
-    .select()
-    .single();
+  // Check if restaurant exists
+  const existing = await fetchMyRestaurant();
 
-  if (error) throw error;
-  return rowToRestaurant(data);
+  if (existing) {
+    // Update existing
+    const { data, error } = await supabase
+      .from('restaurants')
+      .update(row)
+      .eq('chef_id', user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return rowToRestaurant(data);
+  } else {
+    // Create new restaurant for this chef
+    row.chef_id = user.id;
+    if (!row.name) row.name = updates.name || 'My Restaurant';
+
+    const { data, error } = await supabase
+      .from('restaurants')
+      .insert(row)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return rowToRestaurant(data);
+  }
 }
 
 /**
@@ -141,6 +162,7 @@ export async function updateMyRestaurant(updates) {
  */
 export async function fetchMyMenuItems() {
   const restaurant = await fetchMyRestaurant();
+  if (!restaurant) return { restaurant: null, items: [] };
 
   const { data, error } = await supabase
     .from('menu_items')
@@ -213,6 +235,7 @@ export async function deleteMenuItem(id) {
  */
 export async function fetchMyOrders(status = null) {
   const restaurant = await fetchMyRestaurant();
+  if (!restaurant) return [];
 
   let query = supabase
     .from('orders')
@@ -269,6 +292,7 @@ export async function updateOrderStatus(orderId, status) {
  */
 export async function fetchChefStats() {
   const restaurant = await fetchMyRestaurant();
+  if (!restaurant) return { todayOrders: 0, todayRevenue: 0, activeOrders: 0, avgRating: 0 };
   const today = new Date().toISOString().split('T')[0];
 
   const [{ data: todayOrders }, { data: allOrders }] = await Promise.all([

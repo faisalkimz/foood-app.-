@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
   View, StyleSheet, ScrollView, Pressable,
-  TextInput, ActivityIndicator, Image, Switch,
+  TextInput, ActivityIndicator, Image, Switch, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Text, showToast } from '../../src/components/ui';
 import { useTheme } from '../../src/providers/ThemeProvider';
 import { spacing, radius } from '../../src/theme';
@@ -30,21 +31,25 @@ export default function RestaurantInfoScreen() {
   const [address, setAddress] = useState('');
   const [openingHours, setOpeningHours] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [imageUri, setImageUri] = useState('');
 
   useEffect(() => {
     (async () => {
       try {
         const data = await fetchMyRestaurant();
-        setRestaurant(data);
-        setName(data.name);
-        setDescription(data.description || '');
-        setCuisine(data.cuisine || '');
-        setDeliveryTime(String(data.deliveryTime || 30));
-        setDeliveryFee(String(data.deliveryFee || 0));
-        setPhone(data.phone || '');
-        setAddress(data.address || '');
-        setOpeningHours(data.openingHours || '08:00 - 22:00');
-        setIsActive(data.isActive !== false);
+        if (data) {
+          setRestaurant(data);
+          setName(data.name);
+          setDescription(data.description || '');
+          setCuisine(data.cuisine || '');
+          setDeliveryTime(String(data.deliveryTime || 30));
+          setDeliveryFee(String(data.deliveryFee || 0));
+          setPhone(data.phone || '');
+          setAddress(data.address || '');
+          setOpeningHours(data.openingHours || '08:00 - 22:00');
+          setIsActive(data.isActive !== false);
+          setImageUri(data.image || '');
+        }
       } catch (err) {
         showToast({ type: 'error', message: err.message || 'Failed to load restaurant info.' });
       } finally {
@@ -52,6 +57,28 @@ export default function RestaurantInfoScreen() {
       }
     })();
   }, []);
+
+  const pickCoverImage = () => {
+    Alert.alert('Restaurant Cover', 'Choose how to add a cover photo', [
+      {
+        text: 'Take Photo', onPress: async () => {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') { showToast({ type: 'warning', message: 'Camera permission needed.' }); return; }
+          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [16, 9], quality: 0.7 });
+          if (!result.canceled) setImageUri(result.assets[0].uri);
+        },
+      },
+      {
+        text: 'From Gallery', onPress: async () => {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') { showToast({ type: 'warning', message: 'Gallery permission needed.' }); return; }
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [16, 9], quality: 0.7 });
+          if (!result.canceled) setImageUri(result.assets[0].uri);
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -70,6 +97,7 @@ export default function RestaurantInfoScreen() {
         address: address.trim(),
         openingHours: openingHours.trim(),
         isActive,
+        image: imageUri,
       });
       showToast({ type: 'success', message: 'Restaurant info updated!' });
       router.back();
@@ -104,13 +132,17 @@ export default function RestaurantInfoScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Cover image */}
-        <View style={[styles.coverWrap, { backgroundColor: c.backgroundSecondary }]}>
+        {/* Cover image — tappable */}
+        <Pressable onPress={pickCoverImage} style={[styles.coverWrap, { backgroundColor: c.backgroundSecondary }]}>
           <Image
-            source={{ uri: restaurant?.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600' }}
+            source={{ uri: imageUri || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Restaurant')}&background=FF6B35&color=fff&size=600` }}
             style={styles.coverImage}
           />
-        </View>
+          <View style={styles.coverOverlay}>
+            <Ionicons name="camera" size={20} color="#FFF" />
+            <Text variant="caption" style={{ color: '#FFF', fontWeight: '700' }}>Change Cover</Text>
+          </View>
+        </Pressable>
 
         <View style={styles.form}>
           {field('RESTAURANT NAME', name, setName, { placeholder: 'e.g. Rose Garden Kitchen' })}
@@ -190,6 +222,12 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, gap: spacing.xl },
   coverWrap: { borderRadius: radius.lg, overflow: 'hidden' },
   coverImage: { width: '100%', height: 180 },
+  coverOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
   form: { gap: spacing.lg },
   fieldGroup: { gap: spacing.xs },
   fieldLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },

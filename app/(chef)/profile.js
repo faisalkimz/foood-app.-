@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +8,7 @@ import { useTheme } from '../../src/providers/ThemeProvider';
 import { useAuthStore } from '../../src/store';
 import { spacing, radius } from '../../src/theme';
 import { signOut } from '../../src/services/authService';
+import { fetchChefStats, fetchMyRestaurant } from '../../src/services/restaurantService';
 
 const menuSections = [
   {
@@ -36,6 +38,26 @@ export default function ChefProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
+  const [stats, setStats] = useState(null);
+  const [restaurant, setRestaurant] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [rest, st] = await Promise.all([fetchMyRestaurant(), fetchChefStats()]);
+        setRestaurant(rest);
+        setStats(st);
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
+  const avatarUri = restaurant?.image
+    || user?.avatar_url
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.full_name || 'Chef')}&background=FF6B35&color=fff&bold=true`;
+
+  const totalOrders = (stats?.todayOrders ?? 0);
+  const rating = stats?.avgRating > 0 ? stats.avgRating.toFixed(1) : 'New';
+
   const handleMenuPress = (item) => {
     if (item.route === 'logout') {
       Alert.alert('Log Out', 'Are you sure you want to log out?', [
@@ -62,7 +84,7 @@ export default function ChefProfileScreen() {
         {/* Profile card */}
         <View style={[styles.profileCard, { backgroundColor: c.primary }]}>
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=200' }}
+            source={{ uri: avatarUri }}
             style={styles.avatar}
           />
           <View style={styles.profileInfo}>
@@ -71,11 +93,11 @@ export default function ChefProfileScreen() {
             <View style={styles.profileMeta}>
               <View style={styles.metaItem}>
                 <Ionicons name="star" size={14} color="#FFB800" />
-                <Text variant="caption" style={styles.metaText}>4.8</Text>
+                <Text variant="caption" style={styles.metaText}>{rating}</Text>
               </View>
               <View style={styles.metaItem}>
                 <Ionicons name="receipt" size={14} color="rgba(255,255,255,0.8)" />
-                <Text variant="caption" style={styles.metaText}>248 orders</Text>
+                <Text variant="caption" style={styles.metaText}>{totalOrders} today</Text>
               </View>
             </View>
           </View>
