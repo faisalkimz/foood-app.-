@@ -98,7 +98,7 @@ export default function VerificationScreen() {
       if (role === 'chef') {
         router.replace('/(chef)');
       } else {
-        // First time? Go through location onboarding, else go to tabs
+        // First signup → location onboarding, returning login → home
         router.replace(mode === 'signup' ? '/(auth)/location' : '/(tabs)');
       }
     } catch (err) {

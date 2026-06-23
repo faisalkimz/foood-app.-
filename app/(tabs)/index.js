@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
 import { SearchBar, RestaurantCard } from '../../src/components/shared';
-import { useAuthStore } from '../../src/store';
+import { useAuthStore, useLocationStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
 import { categories, restaurants } from '../../src/services/mock/data';
 import { spacing, radius } from '../../src/theme';
@@ -14,6 +14,9 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
+  const savedAddresses = useLocationStore((s) => s.savedAddresses);
+  const selectedAddressId = useLocationStore((s) => s.selectedAddressId);
+  const address = savedAddresses.find((a) => a.id === selectedAddressId) || savedAddresses[0] || null;
   const c = useTheme();
   const [selectedCategory, setSelectedCategory] = useState('1');
 
@@ -22,6 +25,20 @@ export default function HomeScreen() {
     selectedCatName === 'All'
       ? restaurants
       : restaurants.filter((r) => r.cuisine.toLowerCase().includes(selectedCatName.toLowerCase()));
+
+  // Build display address
+  const displayAddress = address
+    ? [address.name, address.street].filter(Boolean).join(', ') || address.city || 'My Location'
+    : 'Set delivery location';
+  const displayCity = address
+    ? [address.city, address.region, address.country].filter(Boolean).join(', ')
+    : null;
+  const displayLabel = address?.label || null;
+
+  // Greeting based on time of day
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good Morning!' : hour < 17 ? 'Good Afternoon!' : 'Good Evening!';
+  const firstName = user?.full_name?.split(' ')[0] || user?.name?.split(' ')[0] || 'there';
 
   return (
     <ScrollView
@@ -34,13 +51,25 @@ export default function HomeScreen() {
         <View>
           <Pressable style={styles.deliverRow} onPress={() => router.push('/profile/address')}>
             <Text variant="caption" style={[styles.deliverLabel, { color: c.primary }]}>DELIVER TO</Text>
+            {displayLabel ? (
+              <View style={[styles.labelBadge, { backgroundColor: c.primaryLight }]}>
+                <Text variant="caption" style={{ color: c.primary, fontWeight: '700', fontSize: 10 }}>{displayLabel.toUpperCase()}</Text>
+              </View>
+            ) : null}
             <Ionicons name="chevron-down" size={14} color={c.primary} />
           </Pressable>
-          <Text variant="body" style={[styles.address, { color: c.text }]}>Halal Lab office</Text>
+          <Text variant="body" style={[styles.address, { color: c.text }]} numberOfLines={1}>
+            {displayAddress}
+          </Text>
+          {displayCity ? (
+            <Text variant="caption" style={{ color: c.textMuted, fontSize: 11, marginTop: 1 }}>
+              {displayCity}
+            </Text>
+          ) : null}
         </View>
         <Pressable style={[styles.avatarBtn, { borderColor: c.primary }]} onPress={() => router.push('/(tabs)/profile')}>
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' }}
+            source={{ uri: user?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' }}
             style={styles.avatar}
           />
         </Pressable>
@@ -49,8 +78,8 @@ export default function HomeScreen() {
       {/* Greeting */}
       <View style={styles.section}>
         <Text variant="body" style={[styles.greetingLight, { color: c.textSecondary }]}>
-          Hey {user?.name?.split(' ')[0] || 'Halal'},{' '}
-          <Text variant="h2" style={[styles.greetingBold, { color: c.text }]}>Good Afternoon!</Text>
+          Hey {firstName},{' '}
+          <Text variant="h2" style={[styles.greetingBold, { color: c.text }]}>{greeting}</Text>
         </Text>
       </View>
 
@@ -133,6 +162,10 @@ const styles = StyleSheet.create({
   },
   deliverRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
   deliverLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  labelBadge: {
+    paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: 4,
+  },
   address: { fontWeight: '600', fontSize: 15 },
   avatarBtn: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', borderWidth: 2 },
   avatar: { width: '100%', height: '100%' },
