@@ -1,14 +1,18 @@
-import { useState } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, TextInput, Alert, Image } from 'react-native';
+import { useState, useEffect } from 'react';
+import {
+  View, StyleSheet, ScrollView, Pressable, TextInput, Alert, Image,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
+import { Text, showToast } from '../../src/components/ui';
 import { useTheme } from '../../src/providers/ThemeProvider';
-import { chefMenuItems } from '../../src/services/mock/data';
+import { supabase } from '../../src/services/supabase';
+import { updateMenuItem, deleteMenuItem } from '../../src/services/restaurantService';
 import { spacing, radius } from '../../src/theme';
 
-const CATEGORIES = ['Pizza', 'Burger', 'Salad', 'Chicken', 'Seafood', 'Sides', 'Dessert', 'Drinks'];
+const CATEGORIES = ['Main', 'Pizza', 'Burger', 'Salad', 'Chicken', 'Seafood', 'Sides', 'Dessert', 'Drinks'];
 
 export default function EditItemScreen() {
   const router = useRouter();
@@ -16,32 +20,84 @@ export default function EditItemScreen() {
   const insets = useSafeAreaInsets();
   const c = useTheme();
 
-  const item = chefMenuItems.find((i) => i.id === id);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [category, setCategory] = useState('Main');
 
-  const [name, setName] = useState(item?.name || '');
-  const [description, setDescription] = useState('A delicious dish prepared with fresh ingredients.');
-  const [price, setPrice] = useState(item?.price?.toString() || '');
-  const [category, setCategory] = useState(item?.category || 'Pizza');
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('menu_items')
+          .select('*')
+          .eq('id', id)
+          .single();
+        if (error) throw error;
+        setName(data.name || '');
+        setDescription(data.description || '');
+        setPrice(data.price?.toString() || '');
+        setCategory(data.category || 'Main');
+        setImageUrl(data.image_url || '');
+      } catch {
+        showToast({ type: 'error', message: 'Could not load item.' });
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [id]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name || !price) {
       Alert.alert('Missing Info', 'Please fill in name and price');
       return;
     }
-    Alert.alert('✅ Updated', `${name} has been updated.`, [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+    setIsSaving(true);
+    try {
+      await updateMenuItem(id, {
+        name,
+        description,
+        price: parseFloat(price),
+        category,
+        image: imageUrl,
+      });
+      showToast({ type: 'success', message: `${name} updated!` });
+      router.back();
+    } catch (err) {
+      showToast({ type: 'error', message: err.message || 'Failed to update.' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = () => {
     Alert.alert('Delete Item?', `"${name}" will be permanently removed.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => {
-        Alert.alert('🗑️ Deleted', 'Item removed from menu.');
-        router.back();
-      }},
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteMenuItem(id);
+            showToast({ type: 'success', message: 'Item removed from menu.' });
+            router.back();
+          } catch {
+            showToast({ type: 'error', message: 'Failed to delete.' });
+          }
+        },
+      },
     ]);
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: c.background, alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={c.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
@@ -60,19 +116,14 @@ export default function EditItemScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Current image */}
-        {item?.image && (
-          <Image source={{ uri: item.image }} style={styles.previewImage} />
-        )}
+        {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.previewImage} /> : null}
 
         <View style={styles.form}>
           <View style={styles.fieldGroup}>
             <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>ITEM NAME</Text>
             <TextInput
               style={[styles.input, { backgroundColor: c.backgroundSecondary, borderColor: c.border, color: c.text }]}
-              value={name}
-              onChangeText={setName}
-              placeholderTextColor={c.textMuted}
+              value={name} onChangeText={setName} placeholderTextColor={c.textMuted}
             />
           </View>
 
@@ -80,12 +131,8 @@ export default function EditItemScreen() {
             <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>DESCRIPTION</Text>
             <TextInput
               style={[styles.input, styles.textArea, { backgroundColor: c.backgroundSecondary, borderColor: c.border, color: c.text }]}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={3}
-              placeholderTextColor={c.textMuted}
-              textAlignVertical="top"
+              value={description} onChangeText={setDescription}
+              multiline numberOfLines={3} placeholderTextColor={c.textMuted} textAlignVertical="top"
             />
           </View>
 
@@ -93,10 +140,17 @@ export default function EditItemScreen() {
             <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>PRICE (UGX)</Text>
             <TextInput
               style={[styles.input, { backgroundColor: c.backgroundSecondary, borderColor: c.border, color: c.text }]}
-              value={price}
-              onChangeText={setPrice}
-              keyboardType="decimal-pad"
-              placeholderTextColor={c.textMuted}
+              value={price} onChangeText={setPrice}
+              keyboardType="decimal-pad" placeholderTextColor={c.textMuted}
+            />
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>IMAGE URL</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: c.backgroundSecondary, borderColor: c.border, color: c.text }]}
+              value={imageUrl} onChangeText={setImageUrl}
+              placeholder="https://..." placeholderTextColor={c.textMuted} autoCapitalize="none"
             />
           </View>
 
@@ -124,8 +178,16 @@ export default function EditItemScreen() {
       </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background }]}>
-        <Pressable style={[styles.saveBtn, { backgroundColor: c.primary }]} onPress={handleSave}>
-          <Text variant="body" style={styles.saveBtnText}>SAVE CHANGES</Text>
+        <Pressable
+          style={[styles.saveBtn, { backgroundColor: c.primary, opacity: isSaving ? 0.6 : 1 }]}
+          onPress={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Text variant="body" style={styles.saveBtnText}>SAVE CHANGES</Text>
+          )}
         </Pressable>
       </View>
     </View>

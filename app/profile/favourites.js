@@ -1,18 +1,30 @@
-import { useState } from 'react';
-import { View, StyleSheet, Pressable, FlatList, Image, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, StyleSheet, Pressable, FlatList, Image, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
 import { useTheme } from '../../src/providers/ThemeProvider';
-import { restaurants } from '../../src/services/mock/data';
+import { fetchRestaurants } from '../../src/services/restaurantService';
 import { spacing, radius } from '../../src/theme';
 
 export default function FavouritesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const c = useTheme();
-  const [favs, setFavs] = useState(restaurants.slice(0, 4));
+  const [favs, setFavs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const all = await fetchRestaurants();
+        // TODO: Replace with a real favourites table. For now show top rated.
+        setFavs(all.slice(0, 4));
+      } catch { /* silent */ }
+      finally { setIsLoading(false); }
+    })();
+  }, []);
 
   const removeFav = (id) => {
     Alert.alert('Remove Favourite?', 'This restaurant will be removed from your favourites.', [

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, Alert, TextInput } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView, Alert, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { useCartStore } from '../../src/store';
+import { Text, showToast } from '../../src/components/ui';
+import { useCartStore, useAuthStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
+import { placeOrder } from '../../src/services/orderService';
 import { spacing, radius } from '../../src/theme';
 
 const PAYMENT_METHODS = [
@@ -38,7 +39,9 @@ export default function PaymentScreen() {
   const insets = useSafeAreaInsets();
   const getSubtotal = useCartStore((s) => s.getSubtotal);
   const clearCart = useCartStore((s) => s.clearCart);
+  const user = useAuthStore((s) => s.user);
   const c = useTheme();
+  const userName = user?.full_name || user?.name || 'Card Holder';
 
   const [selected, setSelected] = useState('cash');
   const [showAddCard, setShowAddCard] = useState(false);
@@ -55,11 +58,10 @@ export default function PaymentScreen() {
 
   const total = getSubtotal();
   const detectedNetwork = getCardNetwork(cardNumber);
+  const [isPlacing, setIsPlacing] = useState(false);
 
-  const handlePayConfirm = () => {
-    if (selected === 'card' && !showAddCard) {
-      // Use saved card — proceed
-    } else if (selected === 'card' && showAddCard) {
+  const handlePayConfirm = async () => {
+    if (selected === 'card' && showAddCard) {
       if (!cardName || !cardNumber || !expiry || !cvc) {
         Alert.alert('Missing Info', 'Please fill in all card details');
         return;
@@ -71,9 +73,35 @@ export default function PaymentScreen() {
       }
     }
 
-    clearCart();
-    // Replace entire stack so user can't go back to payment/checkout
-    router.replace('/checkout/congratulations');
+    const items = useCartStore.getState().items;
+    const restaurantId = useCartStore.getState().restaurantId;
+    if (!items.length) {
+      Alert.alert('Empty Cart', 'Add items before placing an order.');
+      return;
+    }
+
+    setIsPlacing(true);
+    try {
+      const orderId = await placeOrder({
+        restaurantId,
+        items: items.map((i) => ({
+          id: i.id,
+          name: i.name,
+          image: i.image,
+          price: i.price,
+          quantity: i.quantity,
+        })),
+        deliveryAddress: null,
+        notes: '',
+        deliveryFee: 0,
+      });
+      clearCart();
+      router.replace(`/checkout/congratulations?orderId=${orderId}`);
+    } catch (err) {
+      showToast({ type: 'error', message: err.message || 'Failed to place order' });
+    } finally {
+      setIsPlacing(false);
+    }
   };
 
   return (
@@ -159,7 +187,7 @@ export default function PaymentScreen() {
               <View style={styles.cardRow3}>
                 <View>
                   <Text variant="caption" style={styles.cardSmallLabel}>CARD HOLDER</Text>
-                  <Text variant="bodySmall" style={[styles.cardSmallValue, { color: c.textInverse }]}>Vishal Khadok</Text>
+                  <Text variant="bodySmall" style={[styles.cardSmallValue, { color: c.textInverse }]}>{userName}</Text>
                 </View>
                 <View>
                   <Text variant="caption" style={styles.cardSmallLabel}>EXPIRES</Text>
@@ -344,10 +372,18 @@ export default function PaymentScreen() {
 
       {/* Bottom button */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background }]}>
-        <Pressable style={[styles.payBtn, { backgroundColor: c.primary }]} onPress={handlePayConfirm}>
-          <Text variant="body" style={[styles.payBtnText, { color: c.textInverse }]}>
-            {selected === 'cash' ? 'CONFIRM ORDER' : 'PAY & CONFIRM'}
-          </Text>
+        <Pressable
+          style={[styles.payBtn, { backgroundColor: c.primary, opacity: isPlacing ? 0.6 : 1 }]}
+          onPress={handlePayConfirm}
+          disabled={isPlacing}
+        >
+          {isPlacing ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Text variant="body" style={[styles.payBtnText, { color: c.textInverse }]}>
+              {selected === 'cash' ? 'CONFIRM ORDER' : 'PAY & CONFIRM'}
+            </Text>
+          )}
         </Pressable>
       </View>
     </View>

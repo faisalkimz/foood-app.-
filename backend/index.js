@@ -61,7 +61,7 @@ app.post('/api/admin/login', (req, res) => {
   }
 
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@admin.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@2024!';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@2020!';
 
   if (
     email.trim().toLowerCase() !== adminEmail.toLowerCase() ||

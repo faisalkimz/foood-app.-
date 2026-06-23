@@ -1,252 +1,373 @@
-import { View, StyleSheet, Pressable, Image } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, StyleSheet, Pressable, Image, ActivityIndicator, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { WebView } from 'react-native-webview';
 import { Text } from '../../src/components/ui';
 import { useTheme } from '../../src/providers/ThemeProvider';
+import { supabase } from '../../src/services/supabase';
+import { fetchOrder } from '../../src/services/orderService';
 import { spacing, radius } from '../../src/theme';
 
-// Kampala, Uganda coordinates
-const RESTAURANT_LAT = 0.3163;
-const RESTAURANT_LNG = 32.5811;
-const CUSTOMER_LAT = 0.3350;
-const CUSTOMER_LNG = 32.5729;
-const DRIVER_LAT = 0.3260;
-const DRIVER_LNG = 32.5770;
+const STATUS_STEPS = [
+  { key: 'pending', label: 'Order Placed', icon: 'receipt', color: '#6B7280' },
+  { key: 'confirmed', label: 'Confirmed', icon: 'checkmark-circle', color: '#3B82F6' },
+  { key: 'preparing', label: 'Preparing', icon: 'flame', color: '#F59E0B' },
+  { key: 'ready', label: 'Ready for Pickup', icon: 'bag-check', color: '#8B5CF6' },
+  { key: 'delivering', label: 'On the Way', icon: 'bicycle', color: '#FF6B35' },
+  { key: 'delivered', label: 'Delivered', icon: 'checkmark-done-circle', color: '#10B981' },
+];
 
-const DRIVER_PHONE = '+256700123456';
-const DRIVER_NAME = 'Robert Fox';
+function getStepIndex(status) {
+  const idx = STATUS_STEPS.findIndex((s) => s.key === status);
+  return idx >= 0 ? idx : 0;
+}
 
-const mapHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>
-    * { margin: 0; padding: 0; }
-    #map { width: 100%; height: 100vh; }
-  </style>
-</head>
-<body>
-  <div id="map"></div>
-  <script>
-    var map = L.map('map', {
-      zoomControl: false,
-      attributionControl: false,
-    }).setView([${DRIVER_LAT}, ${DRIVER_LNG}], 14);
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-    }).addTo(map);
+function getStatusLabel(status) {
+  const step = STATUS_STEPS.find((s) => s.key === status);
+  return step?.label || status;
+}
 
-    // Restaurant marker (red)
-    var restaurantIcon = L.divIcon({
-      html: '<div style="width:36px;height:36px;border-radius:50%;background:#FF6B35;border:3px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3)"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg></div>',
-      iconSize: [36, 36],
-      iconAnchor: [18, 18],
-      className: '',
-    });
-    L.marker([${RESTAURANT_LAT}, ${RESTAURANT_LNG}], { icon: restaurantIcon }).addTo(map);
-
-    // Customer marker (green)
-    var customerIcon = L.divIcon({
-      html: '<div style="width:36px;height:36px;border-radius:50%;background:#2ECC71;border:3px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3)"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>',
-      iconSize: [36, 36],
-      iconAnchor: [18, 18],
-      className: '',
-    });
-    L.marker([${CUSTOMER_LAT}, ${CUSTOMER_LNG}], { icon: customerIcon }).addTo(map);
-
-    // Driver marker (animated)
-    var driverIcon = L.divIcon({
-      html: '<div style="width:42px;height:42px;border-radius:50%;background:#FF6B35;border:3px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(255,107,53,0.5);animation:pulse 2s infinite"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div>',
-      iconSize: [42, 42],
-      iconAnchor: [21, 21],
-      className: '',
-    });
-    var driverMarker = L.marker([${DRIVER_LAT}, ${DRIVER_LNG}], { icon: driverIcon }).addTo(map);
-
-    // Route line
-    var routeCoords = [
-      [${RESTAURANT_LAT}, ${RESTAURANT_LNG}],
-      [0.3185, 32.5790],
-      [0.3210, 32.5768],
-      [0.3240, 32.5755],
-      [${DRIVER_LAT}, ${DRIVER_LNG}],
-      [0.3290, 32.5745],
-      [0.3320, 32.5735],
-      [${CUSTOMER_LAT}, ${CUSTOMER_LNG}],
-    ];
-    L.polyline(routeCoords, { color: '#FF6B35', weight: 4, opacity: 0.8, dashArray: '10, 8' }).addTo(map);
-
-    // Fit bounds
-    map.fitBounds([
-      [${RESTAURANT_LAT}, ${RESTAURANT_LNG}],
-      [${CUSTOMER_LAT}, ${CUSTOMER_LNG}],
-    ], { padding: [50, 50] });
-
-    // Pulse animation
-    var style = document.createElement('style');
-    style.textContent = '@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,107,53,0.4); } 70% { box-shadow: 0 0 0 15px rgba(255,107,53,0); } 100% { box-shadow: 0 0 0 0 rgba(255,107,53,0); } }';
-    document.head.appendChild(style);
-  </script>
-</body>
-</html>
-`;
+function getStatusColor(status) {
+  const step = STATUS_STEPS.find((s) => s.key === status);
+  return step?.color || '#6B7280';
+}
 
 export default function TrackOrderScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const c = useTheme();
 
-  const handleCall = () => {
-    router.push('/order/call');
-  };
+  const [order, setOrder] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleMessage = () => {
-    router.push('/order/chat');
-  };
+  // Fetch order on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        // Handle 'latest' — get the most recent order
+        if (id === 'latest') {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data } = await supabase
+              .from('orders')
+              .select('id')
+              .eq('customer_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+            if (data) {
+              const orderData = await fetchOrder(data.id);
+              setOrder(orderData);
+            }
+          }
+        } else {
+          const orderData = await fetchOrder(id);
+          setOrder(orderData);
+        }
+      } catch {
+        // order stays null
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [id]);
 
-  // Go back to home — clear the stack to avoid stacking
-  const handleGoBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/(tabs)');
-    }
-  };
+  // Real-time subscription for status changes
+  useEffect(() => {
+    if (!order?.id) return;
+
+    const channel = supabase
+      .channel(`order-${order.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',
+        filter: `id=eq.${order.id}`,
+      }, (payload) => {
+        if (payload.new?.status) {
+          setOrder((prev) => prev ? { ...prev, status: payload.new.status } : prev);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [order?.id]);
+
+  const currentStep = order ? getStepIndex(order.status) : 0;
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: c.background, alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={c.primary} />
+      </View>
+    );
+  }
+
+  if (!order) {
+    return (
+      <View style={[styles.container, { backgroundColor: c.background }]}>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={[styles.backBtn, { backgroundColor: c.backgroundSecondary }]}>
+            <Ionicons name="arrow-back" size={22} color={c.text} />
+          </Pressable>
+          <Text variant="h3" style={{ color: c.text }}>Track Order</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.emptyState}>
+          <Ionicons name="receipt-outline" size={56} color={c.textMuted} />
+          <Text variant="body" style={{ color: c.textMuted }}>Order not found</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const isCancelled = order.status === 'cancelled';
+  const isDelivered = order.status === 'delivered';
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm, backgroundColor: c.background, opacity: 0.97 }]}>
-        <Pressable onPress={handleGoBack} style={[styles.backBtn, { backgroundColor: c.backgroundSecondary }]}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <Pressable
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}
+          style={[styles.backBtn, { backgroundColor: c.backgroundSecondary }]}
+        >
           <Ionicons name="arrow-back" size={22} color={c.text} />
         </Pressable>
         <Text variant="h3" style={{ color: c.text }}>Track Order</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Map */}
-      <View style={styles.mapContainer}>
-        <WebView
-          source={{ html: mapHtml }}
-          style={styles.map}
-          scrollEnabled={false}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          originWhitelist={['*']}
-        />
-      </View>
-
-      {/* Bottom card */}
-      <View style={[styles.bottomCard, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background }]}>
-        <View style={styles.estimateRow}>
-          <View style={[styles.estimateBadge, { backgroundColor: c.primaryLight }]}>
-            <Ionicons name="time" size={16} color={c.primary} />
-            <Text variant="bodySmall" style={{ fontWeight: '600', color: c.primary, fontSize: 13 }}>
-              Estimated: 20 min
-            </Text>
-          </View>
-          <View style={[styles.statusDot, { backgroundColor: c.secondary }]} />
-          <Text variant="bodySmall" style={{ fontWeight: '600', color: c.secondary, fontSize: 13 }}>
-            On the way
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Status banner */}
+        <View style={[styles.statusBanner, { backgroundColor: getStatusColor(order.status) + '15' }]}>
+          <View style={[styles.statusDot, { backgroundColor: getStatusColor(order.status) }]} />
+          <Text variant="h3" style={[styles.statusText, { color: getStatusColor(order.status) }]}>
+            {getStatusLabel(order.status)}
           </Text>
+          {!isDelivered && !isCancelled && (
+            <Text variant="caption" style={[styles.etaText, { color: getStatusColor(order.status) }]}>
+              Est. 20–35 min
+            </Text>
+          )}
         </View>
 
-        <View style={[styles.divider, { backgroundColor: c.borderLight }]} />
+        {/* Status timeline */}
+        {!isCancelled && (
+          <View style={[styles.timelineCard, { backgroundColor: c.backgroundSecondary }]}>
+            {STATUS_STEPS.map((step, idx) => {
+              const isActive = idx <= currentStep;
+              const isLast = idx === STATUS_STEPS.length - 1;
+              return (
+                <View key={step.key} style={styles.timelineStep}>
+                  <View style={styles.timelineLeft}>
+                    <View style={[
+                      styles.timelineDot,
+                      { backgroundColor: isActive ? step.color : c.border },
+                    ]}>
+                      <Ionicons name={step.icon} size={14} color={isActive ? '#FFF' : c.textMuted} />
+                    </View>
+                    {!isLast && (
+                      <View style={[styles.timelineLine, { backgroundColor: isActive ? step.color : c.border }]} />
+                    )}
+                  </View>
+                  <Text variant="body" style={[
+                    styles.timelineLabel,
+                    { color: isActive ? c.text : c.textMuted },
+                    isActive && { fontWeight: '700' },
+                  ]}>
+                    {step.label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Cancelled banner */}
+        {isCancelled && (
+          <View style={[styles.cancelledBanner, { backgroundColor: '#FEE2E2' }]}>
+            <Ionicons name="close-circle" size={24} color="#DC2626" />
+            <Text variant="body" style={{ color: '#DC2626', fontWeight: '700' }}>This order has been cancelled</Text>
+          </View>
+        )}
 
         {/* Restaurant info */}
-        <View style={styles.restaurantRow}>
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=100' }}
-            style={styles.restaurantImage}
-          />
-          <View style={styles.restaurantInfo}>
-            <Text variant="body" style={{ fontWeight: '700', fontSize: 15, color: c.text }}>
-              Uttora Coffee House
-            </Text>
-            <Text variant="caption">Ordered At 06 Sept, 10:00pm</Text>
-            <View style={styles.orderItems}>
-              <Text variant="caption">2x Burger</Text>
-              <Text variant="caption">4x Sandwich</Text>
+        <View style={[styles.infoCard, { backgroundColor: c.backgroundSecondary }]}>
+          <View style={styles.infoRow}>
+            <Image
+              source={{ uri: order.restaurant.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(order.restaurant.name)}&background=FF6B35&color=fff` }}
+              style={styles.restaurantImage}
+            />
+            <View style={styles.infoContent}>
+              <Text variant="body" style={{ fontWeight: '700', fontSize: 15, color: c.text }}>
+                {order.restaurant.name}
+              </Text>
+              <Text variant="caption" style={{ color: c.textMuted }}>
+                Ordered {formatDate(order.createdAt)}
+              </Text>
             </View>
           </View>
         </View>
 
-        {/* Driver info with working buttons */}
-        <View style={[styles.driverRow, { backgroundColor: c.backgroundSecondary }]}>
-          <View style={styles.driverInfo}>
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100' }}
-              style={styles.driverAvatar}
-            />
-            <View>
-              <Text variant="body" style={{ fontWeight: '700', color: c.text }}>{DRIVER_NAME}</Text>
-              <Text variant="caption">Your delivery driver</Text>
+        {/* Order items */}
+        <View style={[styles.infoCard, { backgroundColor: c.backgroundSecondary }]}>
+          <Text variant="label" style={[styles.sectionLabel, { color: c.textMuted }]}>ORDER ITEMS</Text>
+          {order.items.map((item, idx) => (
+            <View
+              key={idx}
+              style={[styles.itemRow, idx < order.items.length - 1 && { borderBottomWidth: 1, borderBottomColor: c.borderLight }]}
+            >
+              <View style={styles.itemLeft}>
+                <View style={[styles.qtyBadge, { backgroundColor: c.primary + '20' }]}>
+                  <Text variant="caption" style={{ color: c.primary, fontWeight: '800' }}>{item.qty}x</Text>
+                </View>
+                <Text variant="body" style={{ color: c.text, fontWeight: '500' }}>{item.name}</Text>
+              </View>
+              <Text variant="body" style={{ color: c.text, fontWeight: '700' }}>UGX {item.price.toLocaleString()}</Text>
             </View>
+          ))}
+          <View style={[styles.totalRow, { borderTopColor: c.border }]}>
+            <Text variant="body" style={{ color: c.textMuted }}>Subtotal</Text>
+            <Text variant="body" style={{ color: c.text, fontWeight: '600' }}>UGX {order.subtotal.toLocaleString()}</Text>
           </View>
-          <View style={styles.driverActions}>
-            <Pressable
-              style={[styles.actionBtn, { backgroundColor: c.background, borderColor: c.border }]}
-              onPress={handleCall}
-            >
-              <Ionicons name="call" size={18} color={c.primary} />
-            </Pressable>
-            <Pressable
-              style={[styles.actionBtn, { backgroundColor: c.background, borderColor: c.border }]}
-              onPress={handleMessage}
-            >
-              <Ionicons name="chatbubble" size={18} color={c.primary} />
-            </Pressable>
+          <View style={styles.feeRow}>
+            <Text variant="body" style={{ color: c.textMuted }}>Delivery Fee</Text>
+            <Text variant="body" style={{ color: c.text, fontWeight: '600' }}>
+              {order.deliveryFee > 0 ? `UGX ${order.deliveryFee.toLocaleString()}` : 'Free'}
+            </Text>
+          </View>
+          <View style={styles.feeRow}>
+            <Text variant="h3" style={{ color: c.text }}>Total</Text>
+            <Text variant="h3" style={{ color: c.primary }}>UGX {order.total.toLocaleString()}</Text>
           </View>
         </View>
-      </View>
+
+        {/* Notes */}
+        {order.notes ? (
+          <View style={[styles.noteCard, { backgroundColor: '#FFF7ED', borderColor: '#FDBA7420' }]}>
+            <Ionicons name="chatbubble-ellipses" size={18} color="#F59E0B" />
+            <View style={{ flex: 1 }}>
+              <Text variant="label" style={{ color: '#92400E', fontSize: 11 }}>NOTE</Text>
+              <Text variant="body" style={{ color: '#78350F', marginTop: 2 }}>{order.notes}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {/* Delivery address */}
+        {order.address ? (
+          <View style={[styles.infoCard, { backgroundColor: c.backgroundSecondary }]}>
+            <View style={styles.addressRow}>
+              <View style={[styles.addressIcon, { backgroundColor: c.primary + '20' }]}>
+                <Ionicons name="location" size={18} color={c.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="label" style={{ color: c.textMuted, fontSize: 11 }}>DELIVERY ADDRESS</Text>
+                <Text variant="body" style={{ color: c.text, fontWeight: '500', marginTop: 2 }}>{order.address}</Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        {/* Back to home */}
+        {isDelivered && (
+          <Pressable
+            style={[styles.homeBtn, { backgroundColor: c.primary }]}
+            onPress={() => router.replace('/(tabs)')}
+          >
+            <Text variant="body" style={styles.homeBtnText}>BACK TO HOME</Text>
+          </Pressable>
+        )}
+      </ScrollView>
     </View>
   );
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const h = d.getHours();
+  const m = d.getMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'pm' : 'am';
+  return `${d.getDate()} ${months[d.getMonth()]}, ${h % 12 || 12}:${m}${ampm}`;
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl, paddingBottom: spacing.sm,
-    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+    paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
   },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
+  content: { paddingHorizontal: spacing.xl, gap: spacing.md },
+
+  // Status banner
+  statusBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingVertical: spacing.base, paddingHorizontal: spacing.xl,
+    borderRadius: radius.lg,
   },
-  mapContainer: { flex: 1 },
-  map: { flex: 1 },
-  bottomCard: {
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingHorizontal: spacing.xl, paddingTop: spacing.xl, gap: spacing.lg,
-    shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 12,
-    elevation: 8,
+  statusDot: { width: 10, height: 10, borderRadius: 5 },
+  statusText: { fontWeight: '800', fontSize: 18, flex: 1 },
+  etaText: { fontWeight: '600', fontSize: 13 },
+
+  // Timeline
+  timelineCard: { padding: spacing.base, borderRadius: radius.lg },
+  timelineStep: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  timelineLeft: { alignItems: 'center' },
+  timelineDot: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  timelineLine: { width: 2, height: 20, marginVertical: 2 },
+  timelineLabel: { fontSize: 14, paddingTop: 5, flex: 1 },
+
+  // Cancelled
+  cancelledBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    padding: spacing.base, borderRadius: radius.lg,
   },
-  estimateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  estimateBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingVertical: spacing.xs, paddingHorizontal: spacing.md, borderRadius: radius.full,
-  },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
-  divider: { height: 1 },
-  restaurantRow: { flexDirection: 'row', gap: spacing.md },
+
+  // Info cards
+  infoCard: { borderRadius: radius.lg, padding: spacing.base },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   restaurantImage: { width: 56, height: 56, borderRadius: radius.md },
-  restaurantInfo: { flex: 1, gap: 2 },
-  orderItems: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
-  driverRow: {
+  infoContent: { flex: 1, gap: 2 },
+  sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: spacing.md },
+
+  // Items
+  itemRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    borderRadius: radius.lg, padding: spacing.md,
+    paddingVertical: spacing.md,
   },
-  driverInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  driverAvatar: { width: 40, height: 40, borderRadius: 20 },
-  driverActions: { flexDirection: 'row', gap: spacing.sm },
-  actionBtn: {
-    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1,
+  itemLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  qtyBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  totalRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingTop: spacing.md, marginTop: spacing.sm, borderTopWidth: 1,
   },
+  feeRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+
+  // Note
+  noteCard: {
+    flexDirection: 'row', gap: spacing.md, padding: spacing.base,
+    borderRadius: radius.lg, borderWidth: 1,
+  },
+
+  // Address
+  addressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  addressIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+
+  // Home button
+  homeBtn: { paddingVertical: spacing.base, borderRadius: radius.full, alignItems: 'center', marginTop: spacing.md },
+  homeBtnText: { color: '#FFF', fontWeight: '700', fontSize: 16, letterSpacing: 0.5 },
 });

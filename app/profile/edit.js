@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, StyleSheet, Pressable, ScrollView, Image, TextInput, Alert, ActionSheetIOS, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Text } from '../../src/components/ui';
+import { Text, showToast } from '../../src/components/ui';
 import { useAuthStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
+import { updateProfile } from '../../src/services/authService';
 import { spacing, radius } from '../../src/theme';
 
 export default function EditProfileScreen() {
@@ -16,11 +17,14 @@ export default function EditProfileScreen() {
   const updateUser = useAuthStore((s) => s.updateUser);
   const c = useTheme();
 
-  const [name, setName] = useState(user?.name || 'Vishal Khadok');
-  const [email, setEmail] = useState(user?.email || 'hello@halallab.co');
-  const [phone, setPhone] = useState('408-841-0926');
-  const [bio, setBio] = useState('I love fast food');
-  const [avatarUri, setAvatarUri] = useState('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200');
+  const [name, setName] = useState(user?.full_name || user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [phone, setPhone] = useState(user?.phone_number || user?.phone || '');
+  const [bio, setBio] = useState(user?.bio || '');
+  const [avatarUri, setAvatarUri] = useState(
+    user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.full_name || 'U')}&background=FF6B35&color=fff`
+  );
+  const [isSaving, setIsSaving] = useState(false);
 
   const pickImage = async (useCamera) => {
     const permission = useCamera
@@ -59,10 +63,31 @@ export default function EditProfileScreen() {
     }
   };
 
-  const handleSave = () => {
-    updateUser({ name, email });
-    Alert.alert('✅ Saved', 'Your profile has been updated.');
-    router.back();
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('Missing Info', 'Please enter your name.');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await updateProfile(user.id, {
+        full_name: name.trim(),
+        phone_number: phone.trim(),
+        bio: bio.trim(),
+      });
+      updateUser({
+        full_name: name.trim(),
+        name: name.trim(),
+        phone_number: phone.trim(),
+        bio: bio.trim(),
+      });
+      showToast({ type: 'success', message: 'Profile updated!' });
+      router.back();
+    } catch (err) {
+      showToast({ type: 'error', message: err.message || 'Failed to save.' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

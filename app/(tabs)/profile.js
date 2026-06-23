@@ -101,7 +101,7 @@ export default function ProfileScreen() {
       {/* Avatar + name */}
       <View style={styles.avatarSection}>
         <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200' }}
+          source={{ uri: user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.full_name || 'U')}&background=FF6B35&color=fff&size=200` }}
           style={[styles.avatar, { borderColor: c.primary }]}
         />
         <Text variant="h2" style={[styles.userName, { color: c.text }]}>

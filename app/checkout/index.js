@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, StyleSheet, Image, ScrollView, Pressable, Platform, Alert, TextInput, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,16 +6,42 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
 import { useCartStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
+import { supabase } from '../../src/services/supabase';
 import { spacing, radius } from '../../src/theme';
 
 export default function CheckoutScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { items, getSubtotal, updateQuantity, removeItem } = useCartStore();
-  const [address, setAddress] = useState('2118 Thornridge Cir. Syracuse');
+  const [address, setAddress] = useState('Loading address...');
+  const [addressData, setAddressData] = useState(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [editAddress, setEditAddress] = useState('');
   const c = useTheme();
+
+  // Load selected address from Supabase
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('user_addresses')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_selected', true)
+          .single();
+        if (data) {
+          setAddress([data.name, data.street, data.city].filter(Boolean).join(', '));
+          setAddressData(data);
+        } else {
+          setAddress('No address saved — tap Edit');
+        }
+      } catch {
+        setAddress('Set your delivery address');
+      }
+    })();
+  }, []);
 
   const subtotal = getSubtotal();
   const deliveryFee = 0;

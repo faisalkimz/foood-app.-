@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { View, StyleSheet, Image, ScrollView, Pressable, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, StyleSheet, Image, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
-import { menuItems } from '../../src/services/mock/data';
+import { supabase } from '../../src/services/supabase';
 import { useCartStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
 import { spacing, radius } from '../../src/theme';
@@ -22,12 +22,46 @@ export default function FoodDetailScreen() {
   const addItem = useCartStore((s) => s.addItem);
   const c = useTheme();
 
-  const allItems = Object.values(menuItems).flat();
-  const item = allItems.find((i) => i.id === id);
-
+  const [item, setItem] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState('md');
   const [quantity, setQuantity] = useState(1);
   const [isFav, setIsFav] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('menu_items')
+          .select('*, restaurants ( id, name )')
+          .eq('id', id)
+          .single();
+        if (error) throw error;
+        setItem({
+          id: data.id,
+          name: data.name,
+          description: data.description || '',
+          price: parseFloat(data.price),
+          image: data.image_url || 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300',
+          category: data.category,
+          restaurantId: data.restaurant_id,
+          restaurant: data.restaurants?.name || 'Restaurant',
+        });
+      } catch {
+        // item stays null
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.center, { backgroundColor: c.background }]}>
+        <ActivityIndicator size="large" color={c.primary} />
+      </View>
+    );
+  }
 
   if (!item) {
     return (
@@ -172,6 +206,7 @@ export default function FoodDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  center: { alignItems: 'center', justifyContent: 'center' },
   headerBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.base, paddingBottom: spacing.sm,

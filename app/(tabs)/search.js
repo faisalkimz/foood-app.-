@@ -1,13 +1,24 @@
-import { View, FlatList, StyleSheet, Pressable, Image, Modal, ScrollView } from 'react-native';
+import { View, FlatList, StyleSheet, Pressable, Image, Modal, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Header, SearchBar, RestaurantCard } from '../../src/components/shared';
 import { Text } from '../../src/components/ui';
-import { restaurants, recentKeywords, suggestedRestaurants, popularFoods, categories } from '../../src/services/mock/data';
+import { fetchRestaurants } from '../../src/services/restaurantService';
 import { useTheme } from '../../src/providers/ThemeProvider';
 import { spacing, radius } from '../../src/theme';
+
+const categories = [
+  { id: '1', name: 'All', emoji: '🍽️' },
+  { id: '2', name: 'Burger', emoji: '🍔' },
+  { id: '3', name: 'Pizza', emoji: '🍕' },
+  { id: '4', name: 'Chicken', emoji: '🍗' },
+  { id: '5', name: 'Sushi', emoji: '🍣' },
+  { id: '6', name: 'Salad', emoji: '🥗' },
+  { id: '7', name: 'Dessert', emoji: '🍰' },
+  { id: '8', name: 'Coffee', emoji: '☕' },
+];
 
 const SORT_OPTIONS = ['Relevance', 'Rating', 'Delivery Time', 'Distance'];
 const PRICE_RANGES = ['$', '$$', '$$$', '$$$$'];
@@ -17,6 +28,20 @@ export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const c = useTheme();
+
+  // Restaurants from DB
+  const [restaurants, setRestaurants] = useState([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await fetchRestaurants();
+        setRestaurants(data);
+      } catch { /* silent */ }
+      finally { setIsLoadingData(false); }
+    })();
+  }, []);
 
   // Filter state
   const [showFilter, setShowFilter] = useState(false);
@@ -78,6 +103,10 @@ export default function SearchScreen() {
   }, [query, selectedCategories, selectedPrices, freeDeliveryOnly, selectedSort]);
 
   const showResults = query.length > 0 || activeFilterCount > 0;
+
+  // Suggested restaurants = top rated from DB
+  const suggestedRestaurants = restaurants.slice(0, 3);
+  const recentKeywords = ['Burger', 'Pizza', 'Chicken', 'Pasta'];
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
@@ -147,47 +176,30 @@ export default function SearchScreen() {
 
               {/* Suggested Restaurants */}
               <View style={styles.section}>
-                <Text variant="h3" style={styles.sectionTitle}>Suggested Restaurants</Text>
-                {suggestedRestaurants.map((r) => {
-                  const full = restaurants.find((rest) => rest.id === r.id);
-                  return (
-                    <Pressable
-                      key={r.id}
-                      style={styles.suggestedItem}
-                      onPress={() => router.push(`/restaurant/${r.id}`)}
-                    >
-                      <Image source={{ uri: full?.image }} style={styles.suggestedImage} />
-                      <View style={styles.suggestedInfo}>
-                        <Text variant="body" style={{ fontWeight: '600', fontSize: 15, color: c.text }}>{r.name}</Text>
-                        <View style={styles.suggestedRating}>
-                          <Ionicons name="star" size={12} color="#FFB800" />
-                          <Text variant="caption">{r.rating}</Text>
-                        </View>
+                <Text variant="h3" style={styles.sectionTitle}>Top Rated</Text>
+                {isLoadingData ? (
+                  <ActivityIndicator size="small" color={c.primary} />
+                ) : suggestedRestaurants.length === 0 ? (
+                  <Text variant="bodySmall" style={{ color: c.textMuted }}>No restaurants available yet.</Text>
+                ) : suggestedRestaurants.map((r) => (
+                  <Pressable
+                    key={r.id}
+                    style={styles.suggestedItem}
+                    onPress={() => router.push(`/restaurant/${r.id}`)}
+                  >
+                    <Image source={{ uri: r.image }} style={styles.suggestedImage} />
+                    <View style={styles.suggestedInfo}>
+                      <Text variant="body" style={{ fontWeight: '600', fontSize: 15, color: c.text }}>{r.name}</Text>
+                      <View style={styles.suggestedRating}>
+                        <Ionicons name="star" size={12} color="#FFB800" />
+                        <Text variant="caption">{r.rating > 0 ? r.rating.toFixed(1) : 'New'}</Text>
                       </View>
-                    </Pressable>
-                  );
-                })}
+                    </View>
+                  </Pressable>
+                ))}
               </View>
 
-              {/* Popular Fast Food */}
-              <View style={styles.section}>
-                <Text variant="h3" style={styles.sectionTitle}>Popular Fast Food</Text>
-                <View style={styles.popularRow}>
-                  {popularFoods.map((food) => (
-                    <Pressable
-                      key={food.id}
-                      style={styles.popularCard}
-                      onPress={() => setQuery(food.name)}
-                    >
-                      <Image source={{ uri: food.image }} style={styles.popularImage} />
-                      <Text variant="body" style={{ fontWeight: '600', fontSize: 14, color: c.text }} numberOfLines={1}>
-                        {food.name}
-                      </Text>
-                      <Text variant="caption" numberOfLines={1}>{food.restaurant}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
+
             </View>
           )}
         />

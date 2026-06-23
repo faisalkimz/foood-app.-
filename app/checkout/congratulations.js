@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { View, StyleSheet, Pressable, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
@@ -9,6 +9,7 @@ import { spacing, radius } from '../../src/theme';
 
 export default function CongratulationsScreen() {
   const router = useRouter();
+  const { orderId } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const c = useTheme();
 
@@ -90,7 +91,7 @@ export default function CongratulationsScreen() {
       <Animated.View style={[styles.bottom, { opacity: fadeAnim }]}>
         <Pressable
           style={[styles.trackBtn, { backgroundColor: c.primary }]}
-          onPress={() => router.replace('/order/oo1')}
+          onPress={() => router.replace(`/order/${orderId || 'latest'}`)}
         >
           <Text variant="body" style={[styles.trackBtnText, { color: c.textInverse }]}>TRACK ORDER</Text>
         </Pressable>
