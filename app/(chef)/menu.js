@@ -1,23 +1,47 @@
-import { useState } from 'react';
-import { View, StyleSheet, FlatList, Image, Pressable, Switch, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, FlatList, Image, Pressable, Switch, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
+import { Text, showToast } from '../../src/components/ui';
 import { useTheme } from '../../src/providers/ThemeProvider';
-import { chefMenuItems as initialItems } from '../../src/services/mock/data';
+import { fetchMyMenuItems, updateMenuItem, deleteMenuItem } from '../../src/services/restaurantService';
 import { spacing, radius } from '../../src/theme';
 
 export default function ChefMenuScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const c = useTheme();
-  const [items, setItems] = useState(initialItems);
+  const [items, setItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const toggleAvailability = (id) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, available: !item.available } : item))
-    );
+  const loadItems = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
+    try {
+      const { items: data } = await fetchMyMenuItems();
+      setItems(data);
+    } catch (err) {
+      showToast({ type: 'error', message: err.message || 'Failed to load menu.' });
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  // Reload every time this screen comes into focus (e.g. after adding an item)
+  useFocusEffect(useCallback(() => { loadItems(); }, []));
+
+  const toggleAvailability = async (id, current) => {
+    // Optimistically update UI
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isAvailable: !current } : i)));
+    try {
+      await updateMenuItem(id, { isAvailable: !current });
+    } catch {
+      // Revert on failure
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isAvailable: current } : i)));
+      showToast({ type: 'error', message: 'Failed to update availability.' });
+    }
   };
 
   const handleDelete = (id, name) => {
@@ -25,12 +49,21 @@ export default function ChefMenuScreen() {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',
-        onPress: () => setItems((prev) => prev.filter((i) => i.id !== id)),
+        onPress: async () => {
+          setItems((prev) => prev.filter((i) => i.id !== id));
+          try {
+            await deleteMenuItem(id);
+            showToast({ type: 'success', message: `${name} removed.` });
+          } catch {
+            loadItems(true); // Reload if delete failed
+            showToast({ type: 'error', message: 'Failed to delete item.' });
+          }
+        },
       },
     ]);
   };
 
-  const availableCount = items.filter((i) => i.available).length;
+  const availableCount = items.filter((i) => i.isAvailable).length;
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
@@ -50,6 +83,11 @@ export default function ChefMenuScreen() {
         </Pressable>
       </View>
 
+      {isLoading ? (
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={c.primary} />
+        </View>
+      ) : (
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
@@ -61,16 +99,23 @@ export default function ChefMenuScreen() {
           paddingTop: spacing.md,
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => { setIsRefreshing(true); loadItems(true); }}
+            tintColor={c.primary}
+          />
+        }
         renderItem={({ item }) => (
           <Pressable
             style={[styles.menuCard, { backgroundColor: c.backgroundSecondary }]}
             onPress={() => router.push(`/chef/edit-item?id=${item.id}`)}
           >
             <Image
-              source={{ uri: item.image }}
-              style={[styles.menuImage, !item.available && styles.menuImageDim]}
+              source={{ uri: item.image || 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300' }}
+              style={[styles.menuImage, !item.isAvailable && styles.menuImageDim]}
             />
-            {!item.available && (
+            {!item.isAvailable && (
               <View style={styles.unavailableBadge}>
                 <Text variant="caption" style={styles.unavailableText}>Unavailable</Text>
               </View>
@@ -82,11 +127,11 @@ export default function ChefMenuScreen() {
               <Text variant="caption" style={{ color: c.textMuted }}>{item.category}</Text>
               <View style={styles.menuBottom}>
                 <Text variant="body" style={[styles.menuPrice, { color: c.primary }]}>
-                  UGX {item.price}
+                  UGX {item.price.toLocaleString()}
                 </Text>
                 <Switch
-                  value={item.available}
-                  onValueChange={() => toggleAvailability(item.id)}
+                  value={item.isAvailable}
+                  onValueChange={() => toggleAvailability(item.id, item.isAvailable)}
                   trackColor={{ false: '#E0E0E0', true: c.primary }}
                   thumbColor="#FFF"
                   style={{ transform: [{ scale: 0.7 }] }}
@@ -117,6 +162,7 @@ export default function ChefMenuScreen() {
           </View>
         }
       />
+      )}
     </View>
   );
 }
@@ -131,6 +177,7 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
   },
+  loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
   gridRow: { gap: spacing.md, marginBottom: spacing.md },
   menuCard: {
     flex: 1, borderRadius: radius.lg, overflow: 'hidden', position: 'relative',

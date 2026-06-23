@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, TextInput, Alert, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, TextInput, ActivityIndicator, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
+import { Text, showToast } from '../../src/components/ui';
 import { useTheme } from '../../src/providers/ThemeProvider';
 import { spacing, radius } from '../../src/theme';
+import { fetchMyRestaurant, addMenuItem } from '../../src/services/restaurantService';
 
 const CATEGORIES = ['Pizza', 'Burger', 'Salad', 'Chicken', 'Seafood', 'Sides', 'Dessert', 'Drinks'];
 
@@ -17,16 +18,33 @@ export default function AddItemScreen() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [category, setCategory] = useState('Pizza');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    if (!name || !price) {
-      Alert.alert('Missing Info', 'Please fill in name and price');
+  const handleSave = async () => {
+    if (!name.trim() || !price) {
+      showToast({ type: 'warning', message: 'Please fill in name and price.' });
       return;
     }
-    Alert.alert('✅ Item Added', `${name} has been added to your menu.`, [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+    setIsSaving(true);
+    try {
+      const restaurant = await fetchMyRestaurant();
+      await addMenuItem(restaurant.id, {
+        name: name.trim(),
+        description: description.trim(),
+        price: parseFloat(price),
+        image: imageUrl.trim(),
+        category,
+        isAvailable: true,
+      });
+      showToast({ type: 'success', message: `${name} added to your menu!` });
+      router.back();
+    } catch (err) {
+      showToast({ type: 'error', message: err.message || 'Failed to add item. Try again.' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -44,11 +62,25 @@ export default function AddItemScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Image placeholder */}
-        <Pressable style={[styles.imagePicker, { backgroundColor: c.backgroundSecondary, borderColor: c.border }]} onPress={() => Alert.alert('📸 Photo', 'Camera and gallery will be available once connected to backend')}>
-          <Ionicons name="camera" size={32} color={c.textMuted} />
-          <Text variant="bodySmall" style={{ color: c.textMuted }}>Tap to add photo</Text>
-        </Pressable>
+        {/* Image URL input */}
+        <View style={styles.fieldGroup}>
+          <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>ITEM PHOTO URL</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: c.backgroundSecondary, borderColor: c.border, color: c.text }]}
+            placeholder="https://… (paste image link)"
+            value={imageUrl}
+            onChangeText={setImageUrl}
+            placeholderTextColor={c.textMuted}
+            autoCapitalize="none"
+          />
+          {imageUrl.trim().length > 10 && (
+            <Image
+              source={{ uri: imageUrl.trim() }}
+              style={styles.imagePreview}
+              resizeMode="cover"
+            />
+          )}
+        </View>
 
         {/* Form */}
         <View style={styles.form}>
@@ -117,8 +149,14 @@ export default function AddItemScreen() {
 
       {/* Save button */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background }]}>
-        <Pressable style={[styles.saveBtn, { backgroundColor: c.primary }]} onPress={handleSave}>
-          <Text variant="body" style={styles.saveBtnText}>ADD ITEM</Text>
+        <Pressable
+          style={[styles.saveBtn, { backgroundColor: c.primary, opacity: isSaving ? 0.7 : 1 }]}
+          onPress={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving
+            ? <ActivityIndicator size="small" color="#FFF" />
+            : <Text variant="body" style={styles.saveBtnText}>ADD TO MENU</Text>}
         </Pressable>
       </View>
     </View>
@@ -136,6 +174,9 @@ const styles = StyleSheet.create({
   imagePicker: {
     height: 160, borderRadius: radius.lg, borderWidth: 1.5, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+  },
+  imagePreview: {
+    width: '100%', height: 160, borderRadius: radius.md, marginTop: spacing.sm,
   },
   form: { gap: spacing.lg },
   fieldGroup: { gap: spacing.xs },
