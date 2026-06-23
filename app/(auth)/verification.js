@@ -119,7 +119,7 @@ export default function VerificationScreen() {
     setResending(true);
     try {
       if (mode === 'signup') {
-        await signUpWithOTP(email, name || '');
+        await signUpWithOTP(email);
       } else {
         await signInWithOTP(email);
       }

@@ -31,7 +31,7 @@ export default function SignupScreen() {
 
     setLoading(true);
     try {
-      await signUpWithOTP(trimmedEmail, trimmedName);
+      await signUpWithOTP(trimmedEmail);
       router.push({
         pathname: '/(auth)/verification',
         params: {

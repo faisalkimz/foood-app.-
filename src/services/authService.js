@@ -5,12 +5,11 @@ import { supabase } from './supabase';
  * @param {string} email
  * @param {string} fullName
  */
-export async function signUpWithOTP(email, fullName) {
+export async function signUpWithOTP(email) {
   const { error } = await supabase.auth.signInWithOtp({
     email: email.trim().toLowerCase(),
     options: {
       shouldCreateUser: true,
-      data: { full_name: fullName },
     },
   });
   if (error) {
