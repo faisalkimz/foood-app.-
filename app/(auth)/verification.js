@@ -12,7 +12,7 @@ import { colors, spacing, radius } from '../../src/theme';
 import { verifyOTP, signInWithOTP, signUpWithOTP, getProfile, updateProfile } from '../../src/services/authService';
 import { useAuthStore } from '../../src/store/authStore';
 
-const CODE_LENGTH = 8;
+const CODE_LENGTH = 6;
 
 export default function VerificationScreen() {
   const router = useRouter();
