@@ -95,21 +95,20 @@ export default function FoodDetailScreen() {
               useCartStore.getState().clearCart();
               addItem({ ...item, quantity });
               Alert.alert('Added!', `${quantity}x ${item.name} added to cart`, [
-                { text: 'Continue Shopping', style: 'cancel' },
-                { text: 'Go to Cart', onPress: () => router.push('/(tabs)/cart') },
+                { text: 'Continue Shopping', onPress: () => router.back() },
+                { text: 'Go to Cart', onPress: () => { router.back(); router.navigate('/(tabs)/cart'); } },
               ]);
             },
           },
         ]
       );
     } else {
-      // Success! Show confirmation
       Alert.alert(
         '✅ Added to Cart!',
-        `${quantity}x ${item.name} — UGX ${totalPrice}`,
+        `${quantity}x ${item.name} — UGX ${totalPrice.toLocaleString()}`,
         [
-          { text: 'Continue Shopping', style: 'cancel', onPress: () => router.back() },
-          { text: 'Go to Cart', onPress: () => router.push('/(tabs)/cart') },
+          { text: 'Continue Shopping', onPress: () => router.back() },
+          { text: 'Go to Cart', onPress: () => { router.back(); router.navigate('/(tabs)/cart'); } },
         ]
       );
     }

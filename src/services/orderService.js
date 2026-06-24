@@ -34,12 +34,10 @@ export async function placeOrder({ restaurantId, items, deliveryAddress, notes =
 
   if (orderError) throw orderError;
 
-  // 2. Insert order items
+  // 2. Insert order items (only columns that exist in the schema)
   const orderItems = items.map((i) => ({
     order_id: order.id,
     menu_item_id: i.id || null,
-    name: i.name,
-    image_url: i.image || '',
     unit_price: i.price,
     quantity: i.quantity,
   }));

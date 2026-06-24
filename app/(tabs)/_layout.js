@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/providers/ThemeProvider';
@@ -7,6 +7,17 @@ import { useCartStore } from '../../src/store';
 export default function TabsLayout() {
   const itemCount = useCartStore((s) => s.getItemCount());
   const c = useTheme();
+  const router = useRouter();
+
+  // Whenever a tab is pressed while a modal/stack screen is on top,
+  // dismiss all stacked screens first so we don't stack tabs on top of each other.
+  const screenListeners = {
+    tabPress: () => {
+      try {
+        if (router.canDismiss()) router.dismissAll();
+      } catch {}
+    },
+  };
 
   return (
     <Tabs
@@ -30,19 +41,19 @@ export default function TabsLayout() {
         tabBarIconStyle: { marginTop: 2 },
       }}
     >
-      <Tabs.Screen name="index" options={{
+      <Tabs.Screen name="index" listeners={screenListeners} options={{
         title: 'Home',
         tabBarIcon: ({ color, focused }) => (
           <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
         ),
       }} />
-      <Tabs.Screen name="search" options={{
+      <Tabs.Screen name="search" listeners={screenListeners} options={{
         title: 'Search',
         tabBarIcon: ({ color, focused }) => (
           <Ionicons name={focused ? 'search' : 'search-outline'} size={24} color={color} />
         ),
       }} />
-      <Tabs.Screen name="cart" options={{
+      <Tabs.Screen name="cart" listeners={screenListeners} options={{
         title: 'Cart',
         tabBarBadge: itemCount > 0 ? itemCount : undefined,
         tabBarBadgeStyle: {
@@ -53,13 +64,13 @@ export default function TabsLayout() {
           <Ionicons name={focused ? 'cart' : 'cart-outline'} size={24} color={color} />
         ),
       }} />
-      <Tabs.Screen name="orders" options={{
+      <Tabs.Screen name="orders" listeners={screenListeners} options={{
         title: 'Orders',
         tabBarIcon: ({ color, focused }) => (
           <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={24} color={color} />
         ),
       }} />
-      <Tabs.Screen name="profile" options={{
+      <Tabs.Screen name="profile" listeners={screenListeners} options={{
         title: 'Profile',
         tabBarIcon: ({ color, focused }) => (
           <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />

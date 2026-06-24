@@ -71,8 +71,8 @@ function AppStack() {
         <Stack.Screen name="(auth)" options={{ gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
         <Stack.Screen name="(chef)" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="restaurant/[id]" options={{ presentation: 'card' }} />
-        <Stack.Screen name="food/[id]" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="restaurant/[id]" options={{ presentation: 'card', gestureEnabled: true }} />
+        <Stack.Screen name="food/[id]" options={{ presentation: 'modal', gestureEnabled: true }} />
         <Stack.Screen name="checkout/index" options={{ gestureEnabled: false }} />
         <Stack.Screen name="checkout/payment" options={{ gestureEnabled: false }} />
         <Stack.Screen

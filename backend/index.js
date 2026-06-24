@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
+import Flutterwave from 'flutterwave-node-v3';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -14,13 +15,16 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+// ─── Flutterwave Client ───────────────────────────────────────────────────────
+const flw = new Flutterwave(
+  process.env.FLW_PUBLIC_KEY || '',
+  process.env.FLW_SECRET_KEY || ''
+);
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: [
-    'http://localhost:5173', // admin dashboard vite dev
-    'http://localhost:3000',
-    'http://localhost:19006', // expo web
-  ],
+  // Allow any origin in development — the phone needs to reach the backend over local WiFi
+  origin: true,
   credentials: true,
 }));
 app.use(express.json());
@@ -491,6 +495,159 @@ function formatDateTime(iso) {
   const ampm = h >= 12 ? 'PM' : 'AM';
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${h % 12 || 12}:${m} ${ampm}`;
 }
+
+// ─── Payment Routes ───────────────────────────────────────────────────────────
+
+/**
+ * POST /api/payment/mobile-money
+ * Initiates MTN or Airtel Uganda mobile money payment via Flutterwave REST API
+ * Body: { phone, network, amount, email, orderId, customerName }
+ */
+app.post('/api/payment/mobile-money', async (req, res) => {
+  const { phone, network, amount, email, orderId, customerName } = req.body;
+
+  if (!phone || !network || !amount || !email || !orderId) {
+    return res.status(400).json({ error: 'phone, network, amount, email, orderId are required' });
+  }
+
+  const networkUpper = network.toUpperCase();
+  if (!['MTN', 'AIRTEL'].includes(networkUpper)) {
+    return res.status(400).json({ error: 'network must be MTN or AIRTEL' });
+  }
+
+  const txRef = `FOOD-${orderId.slice(-8).toUpperCase()}-${Date.now()}`;
+
+  const payload = {
+    phone_number: phone,
+    network: networkUpper,
+    amount: parseFloat(amount),
+    currency: 'UGX',
+    email,
+    tx_ref: txRef,
+    fullname: customerName || 'Customer',
+  };
+
+  console.log(`\n📱 [MoMo] Initiating ${networkUpper} payment:`, JSON.stringify(payload, null, 2));
+
+  try {
+    const flwRes = await fetch('https://api.flutterwave.com/v3/charges?type=mobile_money_uganda', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.FLW_SECRET_KEY}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await flwRes.json();
+    console.log(`📱 [MoMo] Flutterwave response:`, JSON.stringify(data, null, 2));
+
+    if (data.status === 'success') {
+      // Update order with transaction reference
+      await supabaseAdmin
+        .from('orders')
+        .update({ transaction_id: txRef })
+        .eq('id', orderId);
+
+      // Uganda MoMo returns a redirect URL the user must visit to authorize
+      const redirectUrl = data.meta?.authorization?.redirect || null;
+      const mode = data.meta?.authorization?.mode || 'direct';
+
+      console.log(`✅ [MoMo] Charge initiated — txRef: ${txRef}, mode: ${mode}, redirect: ${redirectUrl}`);
+      return res.json({
+        success: true,
+        message: data.message || 'Payment initiated.',
+        txRef,
+        redirectUrl,   // open this in browser for user to authorize
+        mode,
+      });
+    } else {
+      return res.status(400).json({ error: data.message || 'Payment initiation failed' });
+    }
+  } catch (err) {
+    console.error('Mobile money error:', err);
+    res.status(500).json({ error: err.message || 'Payment failed. Please try again.' });
+  }
+});
+
+/**
+ * POST /api/payment/card
+ * Uses Flutterwave Standard (hosted checkout page) — no enckey needed.
+ * Body: { amount, email, orderId, customerName }
+ */
+app.post('/api/payment/card', async (req, res) => {
+  const { amount, email, orderId, customerName } = req.body;
+
+  if (!amount || !email || !orderId) {
+    return res.status(400).json({ error: 'amount, email, orderId are required' });
+  }
+
+  const txRef = `FOOD-CARD-${orderId.slice(-8).toUpperCase()}-${Date.now()}`;
+
+  try {
+    // Flutterwave Standard — creates a hosted payment page (only needs secret key, no enckey)
+    const flwRes = await fetch('https://api.flutterwave.com/v3/payments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.FLW_SECRET_KEY}`,
+      },
+      body: JSON.stringify({
+        tx_ref: txRef,
+        amount: parseFloat(amount),
+        currency: 'UGX',
+        redirect_url: `${process.env.APP_BASE_URL || `http://172.16.4.85:3001`}/api/payment/callback`,
+        customer: { email, name: customerName || 'Customer' },
+        customizations: {
+          title: 'FoodOrder',
+          description: `Order #${orderId.slice(-6).toUpperCase()}`,
+          logo: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100',
+        },
+        meta: { order_id: orderId },
+      }),
+    });
+
+    const data = await flwRes.json();
+
+    if (data.status === 'success' && data.data?.link) {
+      await supabaseAdmin.from('orders').update({ transaction_id: txRef }).eq('id', orderId);
+      console.log(`✅ Card payment link created: ${data.data.link}`);
+      return res.json({ success: true, paymentLink: data.data.link, txRef });
+    } else {
+      throw new Error(data.message || 'Could not create payment link');
+    }
+  } catch (err) {
+    console.error('Card payment error:', err.message);
+    res.status(500).json({ error: err.message || 'Card payment failed.' });
+  }
+});
+
+/**
+ * GET /api/payment/verify/:txRef
+ * Verifies payment status with Flutterwave and updates the order
+ */
+app.get('/api/payment/verify/:txRef', async (req, res) => {
+  const { txRef } = req.params;
+
+  try {
+    const response = await flw.Transaction.verify({ id: txRef });
+
+    if (response.data?.status === 'successful') {
+      // Mark order as paid
+      await supabaseAdmin
+        .from('orders')
+        .update({ payment_status: 'paid', status: 'accepted' })
+        .eq('transaction_id', txRef);
+
+      return res.json({ success: true, status: 'paid', data: response.data });
+    } else {
+      return res.json({ success: false, status: response.data?.status || 'pending' });
+    }
+  } catch (err) {
+    console.error('Verify error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {

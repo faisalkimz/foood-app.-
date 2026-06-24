@@ -24,7 +24,7 @@ export default function CartScreen() {
           <Text variant="bodySmall" style={[styles.emptyText, { color: c.textSecondary }]}>
             Add items from a restaurant to get started
           </Text>
-          <Button title="Browse Restaurants" onPress={() => router.push('/(tabs)')} />
+          <Button title="Browse Restaurants" onPress={() => router.navigate('/(tabs)')} />
         </View>
       </View>
     );

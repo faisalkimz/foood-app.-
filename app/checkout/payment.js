@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, Alert, TextInput, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, StyleSheet, Pressable, ScrollView, Alert, TextInput, ActivityIndicator, Linking } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, showToast } from '../../src/components/ui';
 import { useCartStore, useAuthStore } from '../../src/store';
 import { useTheme } from '../../src/providers/ThemeProvider';
 import { placeOrder } from '../../src/services/orderService';
+import { initMobileMoney, initCardPayment } from '../../src/services/paymentService';
 import { spacing, radius } from '../../src/theme';
 
 const PAYMENT_METHODS = [
@@ -37,11 +38,13 @@ function formatCardNumber(text) {
 export default function PaymentScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { deliveryAddress, deliveryFee: deliveryFeeParam } = useLocalSearchParams();
   const getSubtotal = useCartStore((s) => s.getSubtotal);
   const clearCart = useCartStore((s) => s.clearCart);
   const user = useAuthStore((s) => s.user);
   const c = useTheme();
   const userName = user?.full_name || user?.name || 'Card Holder';
+  const deliveryFee = parseInt(deliveryFeeParam || '0', 10);
 
   const [selected, setSelected] = useState('cash');
   const [showAddCard, setShowAddCard] = useState(false);
@@ -56,19 +59,22 @@ export default function PaymentScreen() {
   const [mobileProvider, setMobileProvider] = useState('mtn');
   const [mobileNumber, setMobileNumber] = useState('');
 
-  const total = getSubtotal();
+  const total = getSubtotal() + deliveryFee;
   const detectedNetwork = getCardNetwork(cardNumber);
   const [isPlacing, setIsPlacing] = useState(false);
 
   const handlePayConfirm = async () => {
+    // Validate mobile money fields
+    if (selected === 'mobile') {
+      if (!mobileNumber || mobileNumber.replace(/\D/g, '').length < 10) {
+        Alert.alert('Phone Required', 'Please enter a valid 10-digit mobile money number');
+        return;
+      }
+    }
+    // Validate card fields
     if (selected === 'card' && showAddCard) {
       if (!cardName || !cardNumber || !expiry || !cvc) {
         Alert.alert('Missing Info', 'Please fill in all card details');
-        return;
-      }
-    } else if (selected === 'mobile') {
-      if (!mobileNumber || mobileNumber.length < 10) {
-        Alert.alert('Phone Required', 'Please enter a valid mobile money number');
         return;
       }
     }
@@ -82,6 +88,7 @@ export default function PaymentScreen() {
 
     setIsPlacing(true);
     try {
+      // 1. Always place the order in Supabase first
       const orderId = await placeOrder({
         restaurantId,
         items: items.map((i) => ({
@@ -91,15 +98,108 @@ export default function PaymentScreen() {
           price: i.price,
           quantity: i.quantity,
         })),
-        deliveryAddress: null,
+        deliveryAddress: deliveryAddress || 'Address not specified',
         notes: '',
-        deliveryFee: 0,
+        deliveryFee,
         paymentMethod: selected === 'mobile' ? 'mobile_money' : selected,
       });
-      clearCart();
-      router.replace(`/checkout/congratulations?orderId=${orderId}`);
+
+      // 2. For cash — done, go to success screen
+      if (selected === 'cash') {
+        clearCart();
+        router.replace(`/checkout/congratulations?orderId=${orderId}`);
+        return;
+      }
+
+      if (selected === 'mobile') {
+        const network = mobileProvider === 'mtn' ? 'MTN' : 'AIRTEL';
+        try {
+          const result = await initMobileMoney({
+            phone: mobileNumber.replace(/\D/g, ''),
+            network,
+            amount: total,
+            email: user?.email || 'customer@foodorder.ug',
+            orderId,
+            customerName: user?.full_name || 'Customer',
+          });
+          clearCart();
+
+          // Flutterwave Uganda MoMo requires a browser redirect to authorize
+          if (result.redirectUrl) {
+            Alert.alert(
+              '📱 Complete Payment',
+              `Tap "Authorize" to open the ${network} MoMo payment page. Your order is saved.`,
+              [
+                {
+                  text: 'Authorize Payment',
+                  onPress: async () => {
+                    await Linking.openURL(result.redirectUrl);
+                    router.replace(`/checkout/congratulations?orderId=${orderId}`);
+                  },
+                },
+                {
+                  text: 'Pay Later (Cash)',
+                  onPress: () => router.replace(`/checkout/congratulations?orderId=${orderId}`),
+                },
+              ]
+            );
+          } else {
+            // Direct mode — prompt sent to phone
+            Alert.alert(
+              '📱 Authorization Sent!',
+              `A prompt has been sent to ${mobileNumber}. Approve it to complete payment.\n\nYour order is being prepared meanwhile.`,
+              [{ text: 'OK', onPress: () => router.replace(`/checkout/congratulations?orderId=${orderId}`) }]
+            );
+          }
+        } catch (payErr) {
+          Alert.alert(
+            'Payment Issue',
+            `${payErr.message}\n\nWould you like to pay cash on delivery instead?`,
+            [
+              { text: 'Cancel Order', style: 'destructive', onPress: () => router.back() },
+              {
+                text: 'Pay Cash',
+                onPress: () => { clearCart(); router.replace(`/checkout/congratulations?orderId=${orderId}`); },
+              },
+            ]
+          );
+        }
+        return;
+      }
+
+      // 4. For card — open Flutterwave payment link
+      if (selected === 'card') {
+        try {
+          const { paymentLink } = await initCardPayment({
+            amount: total,
+            email: user?.email || 'customer@foodorder.ug',
+            orderId,
+            customerName: user?.full_name || 'Customer',
+          });
+          if (paymentLink) {
+            clearCart();
+            await Linking.openURL(paymentLink);
+            router.replace(`/checkout/congratulations?orderId=${orderId}`);
+          } else {
+            throw new Error('Could not generate payment link');
+          }
+        } catch (payErr) {
+          Alert.alert(
+            'Card Payment Issue',
+            `${payErr.message}\n\nPay cash on delivery instead?`,
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+              {
+                text: 'Pay Cash',
+                onPress: () => { clearCart(); router.replace(`/checkout/congratulations?orderId=${orderId}`); },
+              },
+            ]
+          );
+        }
+        return;
+      }
     } catch (err) {
-      showToast({ type: 'error', message: err.message || 'Failed to place order' });
+      showToast({ type: 'error', message: err.message || 'Failed to place order. Please try again.' });
     } finally {
       setIsPlacing(false);
     }
@@ -358,7 +458,9 @@ export default function PaymentScreen() {
             <View style={styles.mmInfoRow}>
               <Ionicons name="information-circle-outline" size={16} color={c.textMuted} />
               <Text variant="caption" style={[styles.mmInfoText, { color: c.textMuted }]}>
-                A prompt will be sent to your phone to authorize the payment of UGX {(total * 3700).toLocaleString()}.
+                A prompt will be sent to your phone to authorize the payment of{' '}
+                <Text style={{ fontWeight: '700', color: c.text }}>UGX {total.toLocaleString()}</Text>.{' '}
+                Make sure {mobileProvider === 'mtn' ? 'MTN MoMo' : 'Airtel Money'} is active and funded.
               </Text>
             </View>
           </View>
@@ -367,7 +469,7 @@ export default function PaymentScreen() {
         {/* Total */}
         <View style={styles.totalSection}>
           <Text variant="caption" style={[styles.totalLabel, { color: c.textMuted }]}>TOTAL:</Text>
-          <Text variant="h1" style={[styles.totalPrice, { color: c.text }]}>UGX {total}</Text>
+          <Text variant="h1" style={[styles.totalPrice, { color: c.text }]}>UGX {total.toLocaleString()}</Text>
         </View>
       </ScrollView>
 

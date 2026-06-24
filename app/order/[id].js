@@ -11,9 +11,11 @@ import { spacing, radius } from '../../src/theme';
 
 const STATUS_STEPS = [
   { key: 'pending', label: 'Order Placed', icon: 'receipt', color: '#6B7280' },
+  { key: 'accepted', label: 'Confirmed', icon: 'checkmark-circle', color: '#3B82F6' },
   { key: 'confirmed', label: 'Confirmed', icon: 'checkmark-circle', color: '#3B82F6' },
   { key: 'preparing', label: 'Preparing', icon: 'flame', color: '#F59E0B' },
   { key: 'ready', label: 'Ready for Pickup', icon: 'bag-check', color: '#8B5CF6' },
+  { key: 'out_for_delivery', label: 'On the Way', icon: 'bicycle', color: '#FF6B35' },
   { key: 'delivering', label: 'On the Way', icon: 'bicycle', color: '#FF6B35' },
   { key: 'delivered', label: 'Delivered', icon: 'checkmark-done-circle', color: '#10B981' },
 ];
@@ -245,24 +247,20 @@ export default function TrackOrderScreen() {
                 <View style={[styles.qtyBadge, { backgroundColor: c.primary + '20' }]}>
                   <Text variant="caption" style={{ color: c.primary, fontWeight: '800' }}>{item.qty}x</Text>
                 </View>
-                <Text variant="body" style={{ color: c.text, fontWeight: '500' }}>{item.name}</Text>
+                <Text variant="body" style={{ color: c.text, fontWeight: '500' }}>{item.name || 'Item'}</Text>
               </View>
-              <Text variant="body" style={{ color: c.text, fontWeight: '700' }}>UGX {item.price.toLocaleString()}</Text>
+              <Text variant="body" style={{ color: c.text, fontWeight: '700' }}>UGX {(item.price || 0).toLocaleString()}</Text>
             </View>
           ))}
           <View style={[styles.totalRow, { borderTopColor: c.border }]}>
-            <Text variant="body" style={{ color: c.textMuted }}>Subtotal</Text>
-            <Text variant="body" style={{ color: c.text, fontWeight: '600' }}>UGX {order.subtotal.toLocaleString()}</Text>
-          </View>
-          <View style={styles.feeRow}>
             <Text variant="body" style={{ color: c.textMuted }}>Delivery Fee</Text>
             <Text variant="body" style={{ color: c.text, fontWeight: '600' }}>
-              {order.deliveryFee > 0 ? `UGX ${order.deliveryFee.toLocaleString()}` : 'Free'}
+              {(order.deliveryFee || 0) > 0 ? `UGX ${(order.deliveryFee).toLocaleString()}` : 'Free'}
             </Text>
           </View>
           <View style={styles.feeRow}>
             <Text variant="h3" style={{ color: c.text }}>Total</Text>
-            <Text variant="h3" style={{ color: c.primary }}>UGX {order.total.toLocaleString()}</Text>
+            <Text variant="h3" style={{ color: c.primary }}>UGX {(order.total || 0).toLocaleString()}</Text>
           </View>
         </View>
 
