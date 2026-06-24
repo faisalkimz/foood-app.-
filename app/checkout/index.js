@@ -19,20 +19,19 @@ export default function CheckoutScreen() {
   const [editAddress, setEditAddress] = useState('');
   const c = useTheme();
 
-  // Load selected address from Supabase
   useEffect(() => {
     (async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         const { data } = await supabase
-          .from('user_addresses')
+          .from('addresses')
           .select('*')
-          .eq('user_id', user.id)
-          .eq('is_selected', true)
+          .eq('customer_id', user.id)
+          .eq('is_default', true)
           .single();
         if (data) {
-          setAddress([data.name, data.street, data.city].filter(Boolean).join(', '));
+          setAddress([data.label, data.address_line].filter(Boolean).join(' — '));
           setAddressData(data);
         } else {
           setAddress('No address saved — tap Edit');
@@ -109,7 +108,7 @@ export default function CheckoutScreen() {
       </View>
 
       {/* White bottom section */}
-      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background }]}>
+      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + spacing.xl, backgroundColor: c.background }]}>
         {/* Delivery address */}
         <View style={styles.addressSection}>
           <View style={styles.addressHeader}>

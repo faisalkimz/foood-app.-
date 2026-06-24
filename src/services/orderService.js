@@ -9,7 +9,7 @@ import { supabase } from './supabase';
  * @param {{ restaurantId, items: [{ id, name, image, price, quantity }], deliveryAddress, notes, deliveryFee }} payload
  * @returns The created order ID
  */
-export async function placeOrder({ restaurantId, items, deliveryAddress, notes = '', deliveryFee = 0 }) {
+export async function placeOrder({ restaurantId, items, deliveryAddress, notes = '', deliveryFee = 0, paymentMethod = 'cash' }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -23,11 +23,11 @@ export async function placeOrder({ restaurantId, items, deliveryAddress, notes =
       customer_id: user.id,
       restaurant_id: restaurantId,
       status: 'pending',
-      delivery_address: deliveryAddress || null,
-      subtotal,
+      delivery_address: deliveryAddress || 'Address not specified',
+      payment_method: paymentMethod,
       delivery_fee: deliveryFee,
       total_amount: total,
-      notes,
+      special_instructions: notes || null,
     })
     .select()
     .single();
@@ -64,7 +64,9 @@ export async function fetchMyOrders() {
     .from('orders')
     .select(`
       *,
-      order_items ( id, name, image_url, unit_price, quantity ),
+      order_items ( id, quantity, unit_price, menu_item_id,
+        menu_items ( id, name, image_url )
+      ),
       restaurants ( id, name, image_url, cuisine )
     `)
     .eq('customer_id', user.id)
@@ -81,19 +83,16 @@ export async function fetchMyOrders() {
     statusRaw: o.status,
     total: parseFloat(o.total_amount || 0),
     items: (o.order_items || []).map((i) => ({
-      name: i.name,
+      name: i.menu_items?.name || 'Item',
       qty: i.quantity,
       price: parseFloat(i.unit_price),
-      image: i.image_url,
+      image: i.menu_items?.image_url || null,
     })),
     itemCount: `${(o.order_items || []).reduce((s, i) => s + i.quantity, 0)} Items`,
     date: formatDate(o.created_at),
     orderId: `#${o.id.slice(-6).toUpperCase()}`,
-    address: o.delivery_address
-      ? [o.delivery_address.name, o.delivery_address.street, o.delivery_address.city]
-          .filter(Boolean).join(', ')
-      : '',
-    notes: o.notes || '',
+    address: o.delivery_address || '',
+    notes: o.special_instructions || '',
     createdAt: o.created_at,
   }));
 }
@@ -106,8 +105,10 @@ export async function fetchOrder(orderId) {
     .from('orders')
     .select(`
       *,
-      order_items ( id, name, image_url, unit_price, quantity ),
-      restaurants ( id, name, image_url, cuisine, address, phone )
+      order_items ( id, quantity, unit_price, menu_item_id,
+        menu_items ( id, name, image_url )
+      ),
+      restaurants ( id, name, image_url, cuisine )
     `)
     .eq('id', orderId)
     .single();
@@ -125,19 +126,15 @@ export async function fetchOrder(orderId) {
       phone: data.restaurants?.phone || '',
     },
     items: (data.order_items || []).map((i) => ({
-      name: i.name,
+      name: i.menu_items?.name || 'Item',
       qty: i.quantity,
       price: parseFloat(i.unit_price),
-      image: i.image_url,
+      image: i.menu_items?.image_url || null,
     })),
     total: parseFloat(data.total_amount || 0),
-    subtotal: parseFloat(data.subtotal || 0),
     deliveryFee: parseFloat(data.delivery_fee || 0),
-    address: data.delivery_address
-      ? [data.delivery_address.name, data.delivery_address.street, data.delivery_address.city]
-          .filter(Boolean).join(', ')
-      : '',
-    notes: data.notes || '',
+    address: data.delivery_address || '',
+    notes: data.special_instructions || '',
     createdAt: data.created_at,
   };
 }
@@ -158,9 +155,11 @@ export async function cancelOrder(orderId) {
 function mapStatus(raw) {
   const map = {
     pending: 'Pending',
+    accepted: 'Confirmed',
     confirmed: 'Confirmed',
     preparing: 'Preparing',
     ready: 'Ready',
+    out_for_delivery: 'On the way',
     delivering: 'On the way',
     delivered: 'Completed',
     cancelled: 'Cancelled',

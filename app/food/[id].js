@@ -183,16 +183,18 @@ export default function FoodDetailScreen() {
 
       {/* Bottom bar */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background, borderTopColor: c.borderLight }]}>
-        <Text variant="h2" style={[styles.totalPrice, { color: c.text }]}>UGX {totalPrice}</Text>
+        <View style={styles.bottomTopRow}>
+          <Text variant="h2" style={[styles.totalPrice, { color: c.text }]}>UGX {totalPrice.toLocaleString()}</Text>
 
-        <View style={styles.quantityRow}>
-          <Pressable style={[styles.qtyBtn, { backgroundColor: c.primary }]} onPress={() => setQuantity(Math.max(1, quantity - 1))}>
-            <Ionicons name="remove" size={18} color={c.textInverse} />
-          </Pressable>
-          <Text variant="h3" style={[styles.qtyText, { color: c.text }]}>{quantity}</Text>
-          <Pressable style={[styles.qtyBtn, { backgroundColor: c.primary }]} onPress={() => setQuantity(quantity + 1)}>
-            <Ionicons name="add" size={18} color={c.textInverse} />
-          </Pressable>
+          <View style={styles.quantityRow}>
+            <Pressable style={[styles.qtyBtn, { backgroundColor: c.primary }]} onPress={() => setQuantity(Math.max(1, quantity - 1))}>
+              <Ionicons name="remove" size={18} color={c.textInverse} />
+            </Pressable>
+            <Text variant="h3" style={[styles.qtyText, { color: c.text }]}>{quantity}</Text>
+            <Pressable style={[styles.qtyBtn, { backgroundColor: c.primary }]} onPress={() => setQuantity(quantity + 1)}>
+              <Ionicons name="add" size={18} color={c.textInverse} />
+            </Pressable>
+          </View>
         </View>
 
         <Pressable style={[styles.addCartBtn, { backgroundColor: c.primary }]} onPress={handleAddToCart}>
@@ -248,9 +250,12 @@ const styles = StyleSheet.create({
   ingredientEmoji: { fontSize: 20 },
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.xl, paddingTop: spacing.base,
     borderTopWidth: 1,
+    gap: spacing.md,
+  },
+  bottomTopRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   totalPrice: { fontWeight: '800', fontSize: 24 },
   quantityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -260,9 +265,9 @@ const styles = StyleSheet.create({
   },
   qtyText: { fontSize: 18, fontWeight: '700' },
   addCartBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    paddingVertical: spacing.md,
     borderRadius: radius.full,
   },
-  addCartText: { fontWeight: '700', fontSize: 13, letterSpacing: 0.3 },
+  addCartText: { fontWeight: '700', fontSize: 15, letterSpacing: 0.3 },
 });

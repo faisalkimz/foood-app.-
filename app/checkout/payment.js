@@ -94,6 +94,7 @@ export default function PaymentScreen() {
         deliveryAddress: null,
         notes: '',
         deliveryFee: 0,
+        paymentMethod: selected === 'mobile' ? 'mobile_money' : selected,
       });
       clearCart();
       router.replace(`/checkout/congratulations?orderId=${orderId}`);
