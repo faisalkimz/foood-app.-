@@ -3,10 +3,10 @@ import { View, StyleSheet, Pressable, FlatList, Alert, TextInput, Modal } from '
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, showToast } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { useAuthStore } from '../../src/store';
-import { spacing, radius } from '../../src/theme';
+import { Text, showToast } from '@/components/ui';
+import { useTheme } from '@/providers/ThemeProvider';
+import { useAuthStore } from '@/store';
+import { spacing, radius } from '@/theme';
 
 const CARD_ICONS = {
   Visa: { color: '#1A1F71', icon: 'card' },

@@ -1,27 +1,19 @@
-import { useState } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, Alert, TextInput, ActivityIndicator, Linking } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, StyleSheet, Pressable, ScrollView, Alert, TextInput, ActivityIndicator, Linking, Modal, AppState } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useURL } from 'expo-linking';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, showToast } from '../../src/components/ui';
-import { useCartStore, useAuthStore } from '../../src/store';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { placeOrder } from '../../src/services/orderService';
-import { initMobileMoney, initCardPayment } from '../../src/services/paymentService';
-import { spacing, radius } from '../../src/theme';
+import { Text, showToast } from '@/components/ui';
+import { formatCurrency } from '@/utils/format';
+import { useCartStore, useAuthStore } from '@/store';
+import { useTheme } from '@/providers/ThemeProvider';
+import { placeOrder } from '@/services/orderService';
+import { initMobileMoney, initCardPayment, verifyPayment } from '@/services/paymentService';
+import { spacing, radius } from '@/theme';
 
-const PAYMENT_METHODS = [
-  { id: 'cash', label: 'Cash', icon: 'cash-outline' },
-  { id: 'card', label: 'Card', icon: 'card-outline' },
-  { id: 'mobile', label: 'Mobile Money', icon: 'phone-portrait-outline' },
-];
+import { PAYMENT_METHODS, MOBILE_PROVIDERS } from '@/constants';
 
-const MOBILE_PROVIDERS = [
-  { id: 'mtn', label: 'MTN MoMo', color: '#FFCC00', textColor: '#1A1A1A', prefix: '0770' },
-  { id: 'airtel', label: 'Airtel Money', color: '#ED1C24', textColor: '#FFF', prefix: '0750' },
-];
-
-// Auto-detect card network from number
 function getCardNetwork(number) {
   const clean = number.replace(/\s/g, '');
   if (clean.startsWith('4')) return 'Visa';
@@ -33,6 +25,31 @@ function getCardNetwork(number) {
 function formatCardNumber(text) {
   const clean = text.replace(/\D/g, '').slice(0, 16);
   return clean.replace(/(.{4})/g, '$1 ').trim();
+}
+
+function luhnCheck(cardNumber) {
+  const digits = cardNumber.replace(/\s/g, '');
+  if (!/^\d{13,19}$/.test(digits)) return false;
+  let sum = 0;
+  let alternate = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let n = parseInt(digits[i], 10);
+    if (alternate) { n *= 2; if (n > 9) n -= 9; }
+    sum += n;
+    alternate = !alternate;
+  }
+  return sum % 10 === 0;
+}
+
+function isValidExpiry(expiry) {
+  const match = expiry.match(/^(\d{2})\/(\d{2})$/);
+  if (!match) return false;
+  const month = parseInt(match[1], 10);
+  const year = parseInt(match[2], 10) + 2000;
+  if (month < 1 || month > 12) return false;
+  const now = new Date();
+  const exp = new Date(year, month);
+  return exp > now;
 }
 
 export default function PaymentScreen() {
@@ -49,13 +66,11 @@ export default function PaymentScreen() {
   const [selected, setSelected] = useState('cash');
   const [showAddCard, setShowAddCard] = useState(false);
 
-  // Card fields
   const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvc, setCvc] = useState('');
 
-  // Mobile Money fields
   const [mobileProvider, setMobileProvider] = useState('mtn');
   const [mobileNumber, setMobileNumber] = useState('');
 
@@ -63,18 +78,50 @@ export default function PaymentScreen() {
   const detectedNetwork = getCardNetwork(cardNumber);
   const [isPlacing, setIsPlacing] = useState(false);
 
+  const [pendingPayment, setPendingPayment] = useState(null);
+  
+  const url = useURL();
+
+  // 1. Deep Link verification: if returning via custom scheme
+  useEffect(() => {
+    if (url && url.includes('payment-success') && pendingPayment) {
+      handleVerifyPayment();
+    }
+  }, [url]);
+
+  // 2. AppState verification: if user manually switches back to app
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && pendingPayment) {
+        handleVerifyPayment();
+      }
+    });
+    return () => subscription.remove();
+  }, [pendingPayment]);
+
   const handlePayConfirm = async () => {
-    // Validate mobile money fields
     if (selected === 'mobile') {
       if (!mobileNumber || mobileNumber.replace(/\D/g, '').length < 10) {
         Alert.alert('Phone Required', 'Please enter a valid 10-digit mobile money number');
         return;
       }
     }
-    // Validate card fields
     if (selected === 'card' && showAddCard) {
       if (!cardName || !cardNumber || !expiry || !cvc) {
         Alert.alert('Missing Info', 'Please fill in all card details');
+        return;
+      }
+      if (!luhnCheck(cardNumber)) {
+        Alert.alert('Invalid Card', 'The card number you entered is not valid. Please check and try again.');
+        return;
+      }
+      if (!isValidExpiry(expiry)) {
+        Alert.alert('Invalid Expiry', 'Please enter a valid expiry date (MM/YY) that has not passed.');
+        return;
+      }
+      const expectedCvcLength = detectedNetwork === 'Amex' ? 4 : 3;
+      if (cvc.replace(/\D/g, '').length < expectedCvcLength) {
+        Alert.alert('Invalid CVC', `Please enter a valid ${expectedCvcLength}-digit security code.`);
         return;
       }
     }
@@ -85,10 +132,13 @@ export default function PaymentScreen() {
       Alert.alert('Empty Cart', 'Add items before placing an order.');
       return;
     }
+    if (!restaurantId) {
+      Alert.alert('Error', 'Restaurant information is missing. Please go back and try again.');
+      return;
+    }
 
     setIsPlacing(true);
     try {
-      // 1. Always place the order in Supabase first
       const orderId = await placeOrder({
         restaurantId,
         items: items.map((i) => ({
@@ -104,7 +154,6 @@ export default function PaymentScreen() {
         paymentMethod: selected === 'mobile' ? 'mobile_money' : selected,
       });
 
-      // 2. For cash — done, go to success screen
       if (selected === 'cash') {
         clearCart();
         router.replace(`/checkout/congratulations?orderId=${orderId}`);
@@ -122,33 +171,33 @@ export default function PaymentScreen() {
             orderId,
             customerName: user?.full_name || 'Customer',
           });
-          clearCart();
 
-          // Flutterwave Uganda MoMo requires a browser redirect to authorize
           if (result.redirectUrl) {
+            setPendingPayment({
+              type: 'mobile',
+              network,
+              txRef: result.txRef,
+              orderId,
+              redirectUrl: result.redirectUrl,
+            });
+            await Linking.openURL(result.redirectUrl);
+          } else {
             Alert.alert(
-              '📱 Complete Payment',
-              `Tap "Authorize" to open the ${network} MoMo payment page. Your order is saved.`,
+              'Authorization Sent',
+              `A prompt has been sent to ${mobileNumber}. Approve it to complete payment.\n\nYour order is saved.`,
               [
                 {
-                  text: 'Authorize Payment',
-                  onPress: async () => {
-                    await Linking.openURL(result.redirectUrl);
-                    router.replace(`/checkout/congratulations?orderId=${orderId}`);
-                  },
+                  text: 'Check Payment Status',
+                  onPress: () => setPendingPayment({
+                    type: 'mobile',
+                    network,
+                    txRef: result.txRef,
+                    orderId,
+                    redirectUrl: null,
+                  }),
                 },
-                {
-                  text: 'Pay Later (Cash)',
-                  onPress: () => router.replace(`/checkout/congratulations?orderId=${orderId}`),
-                },
+                { text: 'Pay Later (Cash)', onPress: () => { clearCart(); router.replace(`/checkout/congratulations?orderId=${orderId}`); }, style: 'cancel' },
               ]
-            );
-          } else {
-            // Direct mode — prompt sent to phone
-            Alert.alert(
-              '📱 Authorization Sent!',
-              `A prompt has been sent to ${mobileNumber}. Approve it to complete payment.\n\nYour order is being prepared meanwhile.`,
-              [{ text: 'OK', onPress: () => router.replace(`/checkout/congratulations?orderId=${orderId}`) }]
             );
           }
         } catch (payErr) {
@@ -167,19 +216,22 @@ export default function PaymentScreen() {
         return;
       }
 
-      // 4. For card — open Flutterwave payment link
       if (selected === 'card') {
         try {
-          const { paymentLink } = await initCardPayment({
+          const { paymentLink, txRef } = await initCardPayment({
             amount: total,
             email: user?.email || 'customer@foodorder.ug',
             orderId,
             customerName: user?.full_name || 'Customer',
           });
           if (paymentLink) {
-            clearCart();
+            setPendingPayment({
+              type: 'card',
+              txRef,
+              orderId,
+              redirectUrl: paymentLink,
+            });
             await Linking.openURL(paymentLink);
-            router.replace(`/checkout/congratulations?orderId=${orderId}`);
           } else {
             throw new Error('Could not generate payment link');
           }
@@ -205,9 +257,42 @@ export default function PaymentScreen() {
     }
   };
 
+  const handleVerifyPayment = async () => {
+    if (!pendingPayment?.txRef) return;
+    setIsPlacing(true);
+    try {
+      const result = await verifyPayment(pendingPayment.txRef);
+      if (result.success && (result.status === 'successful' || result.status === 'completed')) {
+        clearCart();
+        setPendingPayment(null);
+        router.replace(`/checkout/congratulations?orderId=${pendingPayment.orderId}`);
+      } else {
+        Alert.alert(
+          'Payment Not Yet Confirmed',
+          `Status: ${result.status || 'pending'}\n\nPlease complete the payment in the browser and check again.`,
+          [
+            { text: 'Check Again', onPress: handleVerifyPayment },
+            { text: 'Pay Cash', onPress: () => { clearCart(); setPendingPayment(null); router.replace(`/checkout/congratulations?orderId=${pendingPayment.orderId}`); } },
+            { text: 'Cancel Order', style: 'destructive', onPress: () => { setPendingPayment(null); router.back(); } },
+          ]
+        );
+      }
+    } catch (err) {
+      Alert.alert(
+        'Verification Failed',
+        `${err.message}\n\nPlease check again or choose another payment method.`,
+        [
+          { text: 'Try Again', onPress: handleVerifyPayment },
+          { text: 'Pay Cash', onPress: () => { clearCart(); setPendingPayment(null); router.replace(`/checkout/congratulations?orderId=${pendingPayment.orderId}`); } },
+        ]
+      );
+    } finally {
+      setIsPlacing(false);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: c.backgroundSecondary }]}>
           <Ionicons name="arrow-back" size={22} color={c.text} />
@@ -221,7 +306,6 @@ export default function PaymentScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* 3 Payment method tabs */}
         <View style={styles.methodsRow}>
           {PAYMENT_METHODS.map((method) => (
             <Pressable
@@ -260,7 +344,6 @@ export default function PaymentScreen() {
           ))}
         </View>
 
-        {/* ========== CASH ========== */}
         {selected === 'cash' && (
           <View style={[styles.infoCard, { backgroundColor: c.backgroundSecondary }]}>
             <View style={styles.cashIconWrap}>
@@ -273,10 +356,8 @@ export default function PaymentScreen() {
           </View>
         )}
 
-        {/* ========== CARD (Visa/Mastercard/Amex auto-detected) ========== */}
         {selected === 'card' && !showAddCard && (
           <>
-            {/* Saved card visual */}
             <View style={[styles.cardVisual, { backgroundColor: c.splashDark }]}>
               <View style={styles.cardRow1}>
                 <Ionicons name="card" size={24} color={c.textInverse} />
@@ -298,7 +379,7 @@ export default function PaymentScreen() {
             </View>
             <Pressable style={[styles.addNewBtn, { borderColor: c.primary }]} onPress={() => setShowAddCard(true)}>
               <Ionicons name="add" size={20} color={c.primary} />
-              <Text variant="body" style={[styles.addNewText, { color: c.primary }]}>ADD NEW CARD</Text>
+              <Text variant="body" style={[styles.addNewText, { color: c.primary }]}>SAVE A CARD</Text>
             </Pressable>
           </>
         )}
@@ -379,19 +460,29 @@ export default function PaymentScreen() {
                   Alert.alert('Missing Info', 'Please fill in all card details');
                   return;
                 }
-                Alert.alert('✅ Card Saved', `${detectedNetwork || 'Card'} ending in ${cardNumber.slice(-4)} has been added.`);
+                if (!luhnCheck(cardNumber)) {
+                  Alert.alert('Invalid Card', 'Please check the card number and try again.');
+                  return;
+                }
+                if (!isValidExpiry(expiry)) {
+                  Alert.alert('Invalid Expiry', 'Please check the expiry date.');
+                  return;
+                }
+                if (cvc.replace(/\D/g, '').length < 3) {
+                  Alert.alert('Invalid CVC', 'CVC must be 3 or 4 digits.');
+                  return;
+                }
                 setShowAddCard(false);
+                showToast({ type: 'success', message: `${detectedNetwork || 'Card'} saved. Tap PAY & CONFIRM to complete.` });
               }}
             >
-              <Text variant="body" style={[styles.addCardSubmitText, { color: c.textInverse }]}>ADD & MAKE PAYMENT</Text>
+              <Text variant="body" style={[styles.addCardSubmitText, { color: c.textInverse }]}>SAVE CARD</Text>
             </Pressable>
           </View>
         )}
 
-        {/* ========== MOBILE MONEY ========== */}
         {selected === 'mobile' && (
           <View style={[styles.mobileCard, { backgroundColor: c.backgroundSecondary }]}>
-            {/* Provider picker */}
             <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted, marginBottom: spacing.sm }]}>
               SELECT PROVIDER
             </Text>
@@ -424,7 +515,6 @@ export default function PaymentScreen() {
               ))}
             </View>
 
-            {/* Provider banner */}
             <View style={[
               styles.providerBanner,
               { backgroundColor: MOBILE_PROVIDERS.find((p) => p.id === mobileProvider).color },
@@ -442,7 +532,6 @@ export default function PaymentScreen() {
               </Text>
             </View>
 
-            {/* Phone number input */}
             <View style={styles.fieldGroup}>
               <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>PHONE NUMBER</Text>
               <TextInput
@@ -459,21 +548,19 @@ export default function PaymentScreen() {
               <Ionicons name="information-circle-outline" size={16} color={c.textMuted} />
               <Text variant="caption" style={[styles.mmInfoText, { color: c.textMuted }]}>
                 A prompt will be sent to your phone to authorize the payment of{' '}
-                <Text style={{ fontWeight: '700', color: c.text }}>UGX {total.toLocaleString()}</Text>.{' '}
+                <Text style={{ fontWeight: '700', color: c.text }}>{formatCurrency(total)}</Text>.{' '}
                 Make sure {mobileProvider === 'mtn' ? 'MTN MoMo' : 'Airtel Money'} is active and funded.
               </Text>
             </View>
           </View>
         )}
 
-        {/* Total */}
         <View style={styles.totalSection}>
           <Text variant="caption" style={[styles.totalLabel, { color: c.textMuted }]}>TOTAL:</Text>
-          <Text variant="h1" style={[styles.totalPrice, { color: c.text }]}>UGX {total.toLocaleString()}</Text>
+          <Text variant="h1" style={[styles.totalPrice, { color: c.text }]}>{formatCurrency(total)}</Text>
         </View>
       </ScrollView>
 
-      {/* Bottom button */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background }]}>
         <Pressable
           style={[styles.payBtn, { backgroundColor: c.primary, opacity: isPlacing ? 0.6 : 1 }]}
@@ -489,6 +576,48 @@ export default function PaymentScreen() {
           )}
         </Pressable>
       </View>
+
+      <Modal visible={!!pendingPayment} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: c.background }]}>
+            <View style={styles.modalIconWrap}>
+              <Ionicons name="time-outline" size={48} color={c.primary} />
+            </View>
+            <Text variant="h3" style={[styles.modalTitle, { color: c.text }]}>Payment Pending</Text>
+            <Text variant="body" style={[styles.modalDesc, { color: c.textSecondary }]}>
+              {pendingPayment?.type === 'card'
+                ? 'Complete the card payment in the browser that opened, then tap "Verify Payment" below.'
+                : `Authorize the ${pendingPayment?.network || 'mobile money'} prompt on your phone, then tap "Verify Payment".`}
+            </Text>
+            <Text variant="caption" style={[styles.modalHint, { color: c.textMuted }]}>
+              Your order is saved. You can also choose to pay cash on delivery.
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                style={[styles.modalBtn, { backgroundColor: c.primary }]}
+                onPress={handleVerifyPayment}
+                disabled={isPlacing}
+              >
+                {isPlacing ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text variant="body" style={[styles.modalBtnText, { color: c.textInverse }]}>Verify Payment</Text>
+                )}
+              </Pressable>
+              <Pressable
+                style={[styles.modalBtnSecondary, { borderColor: c.border }]}
+                onPress={() => {
+                  clearCart();
+                  setPendingPayment(null);
+                  router.replace(`/checkout/congratulations?orderId=${pendingPayment?.orderId}`);
+                }}
+              >
+                <Text variant="body" style={[styles.modalBtnTextSecondary, { color: c.text }]}>Pay Cash Instead</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -505,7 +634,6 @@ const styles = StyleSheet.create({
   },
   content: { paddingHorizontal: spacing.xl, gap: spacing.xl },
 
-  // Method tabs
   methodsRow: { flexDirection: 'row', gap: spacing.md },
   methodCard: {
     flex: 1, alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md,
@@ -518,7 +646,6 @@ const styles = StyleSheet.create({
   },
   methodLabel: { fontSize: 12, fontWeight: '500' },
 
-  // Cash
   infoCard: {
     alignItems: 'center', padding: spacing.xl, borderRadius: radius.lg,
     gap: spacing.md,
@@ -530,7 +657,6 @@ const styles = StyleSheet.create({
   infoTitle: { fontWeight: '700', fontSize: 18 },
   infoText: { textAlign: 'center', lineHeight: 22, fontSize: 14 },
 
-  // Card visual
   cardVisual: {
     borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg,
   },
@@ -549,7 +675,6 @@ const styles = StyleSheet.create({
   },
   addNewText: { fontWeight: '700', fontSize: 14 },
 
-  // Card form
   cardForm: {
     borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg,
   },
@@ -575,7 +700,6 @@ const styles = StyleSheet.create({
   },
   addCardSubmitText: { fontWeight: '700', fontSize: 15 },
 
-  // Mobile Money
   mobileCard: {
     borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg,
   },
@@ -594,12 +718,10 @@ const styles = StyleSheet.create({
   },
   mmInfoText: { fontSize: 12, flex: 1, lineHeight: 18 },
 
-  // Total
   totalSection: { alignItems: 'flex-start' },
   totalLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 0.3 },
   totalPrice: { fontSize: 32, fontWeight: '800' },
 
-  // Bottom
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: spacing.xl, paddingTop: spacing.base,
@@ -609,4 +731,31 @@ const styles = StyleSheet.create({
     borderRadius: radius.full, alignItems: 'center',
   },
   payBtnText: { fontWeight: '700', fontSize: 16, letterSpacing: 0.5 },
+
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', alignItems: 'center',
+    padding: spacing.xl,
+  },
+  modalCard: {
+    width: '100%', borderRadius: radius.lg,
+    padding: spacing.xl, alignItems: 'center', gap: spacing.md,
+  },
+  modalIconWrap: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center',
+  },
+  modalTitle: { fontWeight: '700', fontSize: 20 },
+  modalDesc: { textAlign: 'center', lineHeight: 22, fontSize: 14 },
+  modalHint: { textAlign: 'center', fontSize: 12, lineHeight: 18 },
+  modalActions: { width: '100%', gap: spacing.md, marginTop: spacing.sm },
+  modalBtn: {
+    paddingVertical: spacing.base, borderRadius: radius.full, alignItems: 'center',
+  },
+  modalBtnText: { fontWeight: '700', fontSize: 16 },
+  modalBtnSecondary: {
+    paddingVertical: spacing.base, borderRadius: radius.full, alignItems: 'center',
+    borderWidth: 1.5,
+  },
+  modalBtnTextSecondary: { fontWeight: '600', fontSize: 15 },
 });

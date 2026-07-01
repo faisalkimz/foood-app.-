@@ -6,10 +6,10 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Input, showToast } from '../../src/components/ui';
-import { spacing, radius } from '../../src/theme';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { signUpWithOTP } from '../../src/services/authService';
+import { Text, Input, showToast } from '@/components/ui';
+import { spacing, radius } from '@/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import { signUpWithOTP } from '@/services/authService';
 
 export default function SignupScreen() {
   const router = useRouter();

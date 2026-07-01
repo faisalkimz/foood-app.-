@@ -6,25 +6,26 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton } from '../../src/components/ui';
-import { SearchBar, RestaurantCard } from '../../src/components/shared';
-import { useAuthStore, useLocationStore } from '../../src/store';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { fetchRestaurants } from '../../src/services/restaurantService';
-import { spacing, radius } from '../../src/theme';
+import { Text, Skeleton } from '@/components/ui';
+import { SearchBar, RestaurantCard } from '@/components/shared';
+import { useAuthStore, useLocationStore } from '@/store';
+import { useTheme } from '@/providers/ThemeProvider';
+import { fetchRestaurants } from '@/services/restaurantService';
+import { supabase } from '@/services/supabase';
+import { spacing, radius } from '@/theme';
 
-// Food categories (static UI filter — not from DB)
-const categories = [
-  { id: 'all', name: 'All', emoji: '🍽️' },
-  { id: 'burger', name: 'Burger', emoji: '🍔' },
-  { id: 'pizza', name: 'Pizza', emoji: '🍕' },
-  { id: 'chicken', name: 'Chicken', emoji: '🍗' },
-  { id: 'sushi', name: 'Sushi', emoji: '🍣' },
-  { id: 'pasta', name: 'Pasta', emoji: '🍝' },
-  { id: 'salad', name: 'Salad', emoji: '🥗' },
-  { id: 'dessert', name: 'Dessert', emoji: '🍰' },
-  { id: 'coffee', name: 'Coffee', emoji: '☕' },
-];
+import { CATEGORIES as categories } from '@/constants';
+
+const CATEGORY_KEYWORDS = {
+  burger: ['burger', 'burgers', 'hamburger'],
+  pizza: ['pizza', 'pizzas'],
+  chicken: ['chicken', 'fried chicken', 'grilled chicken', 'pollo'],
+  sushi: ['sushi', 'sashimi', 'maki', 'japanese'],
+  pasta: ['pasta', 'spaghetti', 'noodles', 'macaroni'],
+  salad: ['salad', 'salads', 'wrap', 'bowl'],
+  dessert: ['dessert', 'desserts', 'cake', 'ice cream', 'pastry', 'sweet'],
+  coffee: ['coffee', 'cafe', 'coffee shop', 'tea', 'beverage', 'drinks'],
+};
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -40,6 +41,34 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [favouriteIds, setFavouriteIds] = useState(new Set());
+
+  const loadFavourites = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('favourites')
+        .select('restaurant_id')
+        .eq('user_id', user.id);
+      if (data) setFavouriteIds(new Set(data.map((f) => f.restaurant_id)));
+    } catch { /* silent */ }
+  };
+
+  const toggleFavourite = async (restaurantId) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.push('/(auth)/login');
+      return;
+    }
+    if (favouriteIds.has(restaurantId)) {
+      await supabase.from('favourites').delete().eq('user_id', user.id).eq('restaurant_id', restaurantId);
+      setFavouriteIds((prev) => { const next = new Set(prev); next.delete(restaurantId); return next; });
+    } else {
+      await supabase.from('favourites').insert({ user_id: user.id, restaurant_id: restaurantId });
+      setFavouriteIds((prev) => new Set(prev).add(restaurantId));
+    }
+  };
 
   const loadRestaurants = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true);
@@ -47,6 +76,7 @@ export default function HomeScreen() {
     try {
       const data = await fetchRestaurants();
       setRestaurants(data);
+      loadFavourites();
     } catch (err) {
       setError('Could not load restaurants. Pull down to retry.');
     } finally {
@@ -64,13 +94,14 @@ export default function HomeScreen() {
     loadRestaurants(true);
   };
 
-  // Filter by selected category
   const filteredRestaurants = selectedCategory === 'all'
     ? restaurants
-    : restaurants.filter((r) =>
-        r.cuisine.toLowerCase().includes(selectedCategory.toLowerCase()) ||
-        r.name.toLowerCase().includes(selectedCategory.toLowerCase())
-      );
+    : restaurants.filter((r) => {
+        const keywords = CATEGORY_KEYWORDS[selectedCategory] || [selectedCategory];
+        const cuisine = (r.cuisine || '').toLowerCase();
+        const name = (r.name || '').toLowerCase();
+        return keywords.some(kw => cuisine.includes(kw) || name.includes(kw));
+      });
 
   // Address display
   const displayAddress = address
@@ -228,6 +259,8 @@ export default function HomeScreen() {
             key={restaurant.id}
             restaurant={restaurant}
             onPress={() => router.push(`/restaurant/${restaurant.id}`)}
+            isFavourite={favouriteIds.has(restaurant.id)}
+            onToggleFavourite={toggleFavourite}
           />
         ))}
       </View>

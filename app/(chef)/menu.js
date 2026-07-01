@@ -3,10 +3,11 @@ import { View, StyleSheet, FlatList, Image, Pressable, Switch, Alert, ActivityIn
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, showToast } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { fetchMyMenuItems, updateMenuItem, deleteMenuItem } from '../../src/services/restaurantService';
-import { spacing, radius } from '../../src/theme';
+import { Text, showToast } from '@/components/ui';
+import { formatCurrency } from '@/utils/format';
+import { useTheme } from '@/providers/ThemeProvider';
+import { fetchMyMenuItems, updateMenuItem, deleteMenuItem } from '@/services/restaurantService';
+import { spacing, radius } from '@/theme';
 
 export default function ChefMenuScreen() {
   const router = useRouter();
@@ -127,7 +128,7 @@ export default function ChefMenuScreen() {
               <Text variant="caption" style={{ color: c.textMuted }}>{item.category}</Text>
               <View style={styles.menuBottom}>
                 <Text variant="body" style={[styles.menuPrice, { color: c.primary }]}>
-                  UGX {item.price.toLocaleString()}
+                  {formatCurrency(item.price)}
                 </Text>
                 <Switch
                   value={item.isAvailable}

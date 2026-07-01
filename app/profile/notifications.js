@@ -3,10 +3,11 @@ import { View, StyleSheet, Pressable, SectionList, Image, ActivityIndicator, Ref
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { supabase } from '../../src/services/supabase';
-import { spacing, radius } from '../../src/theme';
+import { Text } from '@/components/ui';
+import { useTheme } from '@/providers/ThemeProvider';
+import { supabase } from '@/services/supabase';
+import { spacing, radius } from '@/theme';
+import { formatCurrency } from '@/utils/format';
 
 const statusMessages = {
   pending: { title: 'Order placed', icon: 'receipt', bg: '#6B7280' },
@@ -61,7 +62,7 @@ export default function NotificationsScreen() {
           id: o.id,
           type: 'order',
           title: info.title,
-          subtitle: `${o.restaurants?.name || 'Restaurant'} — UGX ${parseFloat(o.total_amount || 0).toLocaleString()}`,
+          subtitle: `${o.restaurants?.name || 'Restaurant'} — ${formatCurrency(parseFloat(o.total_amount || 0))}`,
           time: timeAgo(o.updated_at || o.created_at),
           image: o.restaurants?.image_url || null,
           iconName: info.icon,

@@ -3,10 +3,10 @@ import { View, StyleSheet, Pressable, ScrollView, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { useThemeStore } from '../../src/store';
-import { spacing, radius } from '../../src/theme';
+import { Text } from '@/components/ui';
+import { useTheme } from '@/providers/ThemeProvider';
+import { useThemeStore } from '@/store';
+import { spacing, radius } from '@/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();

@@ -5,10 +5,10 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { supabase } from '../../src/services/supabase';
-import { spacing, radius } from '../../src/theme';
+import { Text } from '@/components/ui';
+import { useTheme } from '@/providers/ThemeProvider';
+import { supabase } from '@/services/supabase';
+import { spacing, radius } from '@/theme';
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -20,12 +20,16 @@ export default function ChatScreen() {
   const [contactName, setContactName] = useState('Restaurant');
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [currentUserId, setCurrentUserId] = useState(null);
 
-  // Fetch restaurant name from order
   useEffect(() => {
     if (!orderId) return;
     (async () => {
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        setCurrentUserId(user.id);
+
         const { data: order } = await supabase
           .from('orders')
           .select('restaurants ( name )')
@@ -33,20 +37,59 @@ export default function ChatScreen() {
           .single();
         if (order?.restaurants?.name) {
           setContactName(order.restaurants.name);
-          // Set initial messages with restaurant name
-          setMessages([
-            { id: '1', text: `Hi! Your order from ${order.restaurants.name} is being prepared.`, sender: 'restaurant', time: formatTime() },
-            { id: '2', text: "We'll update you when it's ready! 🍳", sender: 'restaurant', time: formatTime() },
-          ]);
         }
       } catch {
-        // fallback
-        setMessages([
-          { id: '1', text: 'Hi! How can we help you?', sender: 'restaurant', time: formatTime() },
-        ]);
+        // fallback to default name
       }
     })();
   }, [orderId]);
+
+  useEffect(() => {
+    if (!orderId || !currentUserId) return;
+    (async () => {
+      const { data: existing } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: true });
+
+      if (existing) {
+        setMessages(existing.map(msg => ({
+          id: msg.id,
+          text: msg.message,
+          sender: msg.sender_id === currentUserId ? 'me' : 'restaurant',
+          time: formatTime(msg.created_at),
+        })));
+      }
+    })();
+  }, [orderId, currentUserId]);
+
+  useEffect(() => {
+    if (!orderId) return;
+    const channel = supabase
+      .channel(`customer-chat-${orderId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `order_id=eq.${orderId}`,
+      }, (payload) => {
+        const newMsg = payload.new;
+        setMessages((prev) => {
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          return [...prev, {
+            id: newMsg.id,
+            text: newMsg.message,
+            sender: newMsg.sender_id === currentUserId ? 'me' : 'restaurant',
+            time: formatTime(newMsg.created_at),
+          }];
+        });
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [orderId, currentUserId]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -54,34 +97,21 @@ export default function ChatScreen() {
     }, 200);
   }, [messages.length]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
-    const newMsg = {
-      id: Date.now().toString(),
-      text: input.trim(),
-      sender: 'me',
-      time: formatTime(),
-    };
-    setMessages((prev) => [...prev, newMsg]);
+    const text = input.trim();
     setInput('');
-
-    // Simulate restaurant reply after 1.5s
-    setTimeout(() => {
-      const replies = [
-        "Your order is being prepared with care! 👨‍🍳",
-        "We'll have it ready soon!",
-        "Thank you for your patience! 🙏",
-        "Almost done! Your food will be ready shortly.",
-        "Great question! Let me check for you.",
-      ];
-      const reply = {
-        id: (Date.now() + 1).toString(),
-        text: replies[Math.floor(Math.random() * replies.length)],
-        sender: 'restaurant',
-        time: formatTime(),
-      };
-      setMessages((prev) => [...prev, reply]);
-    }, 1500);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase.from('chat_messages').insert({
+        order_id: orderId,
+        sender_id: user.id,
+        message: text,
+      });
+    } catch {
+      // silent
+    }
   };
 
   const renderMessage = ({ item }) => {
@@ -114,7 +144,6 @@ export default function ChatScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm, borderBottomColor: c.borderLight }]}>
         <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: c.backgroundSecondary }]}>
           <Ionicons name="arrow-back" size={22} color={c.text} />
@@ -134,7 +163,6 @@ export default function ChatScreen() {
         </Pressable>
       </View>
 
-      {/* Messages */}
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -143,9 +171,16 @@ export default function ChatScreen() {
         contentContainerStyle={[styles.messagesList, { paddingBottom: spacing.md }]}
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        ListEmptyComponent={
+          <View style={styles.emptyChat}>
+            <Ionicons name="chatbubbles-outline" size={40} color={c.textMuted} />
+            <Text variant="body" style={{ color: c.textMuted, textAlign: 'center', marginTop: spacing.sm }}>
+              Start chatting with {contactName}
+            </Text>
+          </View>
+        }
       />
 
-      {/* Input bar */}
       <View style={[styles.inputBar, { paddingBottom: insets.bottom + spacing.sm, backgroundColor: c.background, borderTopColor: c.borderLight }]}>
         <View style={[styles.inputWrap, { backgroundColor: c.backgroundSecondary, borderColor: c.border }]}>
           <TextInput
@@ -166,8 +201,8 @@ export default function ChatScreen() {
   );
 }
 
-function formatTime() {
-  const d = new Date();
+function formatTime(iso) {
+  const d = iso ? new Date(iso) : new Date();
   const h = d.getHours();
   const m = d.getMinutes().toString().padStart(2, '0');
   const ampm = h >= 12 ? 'pm' : 'am';
@@ -187,7 +222,8 @@ const styles = StyleSheet.create({
   headerAction: {
     width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
   },
-  messagesList: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg },
+  messagesList: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, flexGrow: 1 },
+  emptyChat: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   msgRow: { marginBottom: spacing.md, alignItems: 'flex-start' },
   msgRowMe: { alignItems: 'flex-end' },
   bubble: {

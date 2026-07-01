@@ -7,11 +7,11 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { Text } from '../../src/components/ui';
-import { showToast } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { colors, spacing, radius } from '../../src/theme';
-import { useLocationStore } from '../../src/store/locationStore';
+import { Text } from '@/components/ui';
+import { showToast } from '@/components/ui';
+import { useTheme } from '@/providers/ThemeProvider';
+import { spacing, radius } from '@/theme';
+import { useLocationStore } from '@/store/locationStore';
 
 const LABEL_OPTIONS = [
   { label: 'Home', icon: 'home-outline' },
@@ -279,7 +279,7 @@ export default function AddressScreen() {
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
       {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm, backgroundColor: colors.splashDark }]}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm, backgroundColor: c.backgroundSecondary }]}>
         <Pressable
           onPress={() => view === 'list' ? router.back() : (setView('list'), setEditingAddr(null))}
           style={styles.backBtn}

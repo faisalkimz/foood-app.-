@@ -6,10 +6,11 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton, showToast } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { fetchMyOrders, cancelOrder } from '../../src/services/orderService';
-import { spacing, radius } from '../../src/theme';
+import { Text, Skeleton, showToast } from '@/components/ui';
+import { formatCurrency } from '@/utils/format';
+import { useTheme } from '@/providers/ThemeProvider';
+import { fetchMyOrders, cancelOrder } from '@/services/orderService';
+import { spacing, radius } from '@/theme';
 
 const STATUS_BG = {
   'Completed': '#DCFCE7', 'Cancelled': '#FEE2E2',
@@ -146,7 +147,7 @@ export default function OrdersScreen() {
                     {item.restaurant}
                   </Text>
                   <Text variant="h3" style={[styles.orderPrice, { color: c.primary }]}>
-                    UGX {item.total.toLocaleString()}
+                    {formatCurrency(item.total)}
                   </Text>
                   <Text variant="caption" style={{ color: c.textMuted }}>
                     {item.date} · {item.itemCount}

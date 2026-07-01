@@ -18,7 +18,8 @@ import {
   selectAddressInDB,
 } from '../services/addressService';
 
-const CACHE_KEY = '@foodorder_addresses_v3';
+const CACHE_KEY = '@foodorder_addresses_v4';
+const SCHEMA_VERSION = 1;
 
 export const useLocationStore = create((set, get) => ({
   /** All saved delivery addresses (from Supabase) */
@@ -35,6 +36,7 @@ export const useLocationStore = create((set, get) => ({
 
   /** True if Supabase data has been loaded at least once */
   isLoaded: false,
+  _isInitialized: false,
 
   // ─── Derived (computed in component via store selectors) ─────────────────
 
@@ -50,7 +52,7 @@ export const useLocationStore = create((set, get) => ({
     try {
       await AsyncStorage.setItem(
         CACHE_KEY,
-        JSON.stringify({ savedAddresses, selectedAddressId, coords })
+        JSON.stringify({ _version: SCHEMA_VERSION, savedAddresses, selectedAddressId, coords })
       );
     } catch { /* non-critical */ }
   },
@@ -59,8 +61,14 @@ export const useLocationStore = create((set, get) => ({
     try {
       const raw = await AsyncStorage.getItem(CACHE_KEY);
       if (raw) {
-        const { savedAddresses, selectedAddressId, coords } = JSON.parse(raw);
-        set({ savedAddresses: savedAddresses || [], selectedAddressId, coords });
+        const parsed = JSON.parse(raw);
+        if (parsed._version === SCHEMA_VERSION) {
+          set({
+            savedAddresses: parsed.savedAddresses || [],
+            selectedAddressId: parsed.selectedAddressId || null,
+            coords: parsed.coords || null,
+          });
+        }
       }
     } catch { /* ignore */ }
   },
@@ -68,10 +76,11 @@ export const useLocationStore = create((set, get) => ({
   // ─── Initialize (call once on app start, after user is authenticated) ─────
 
   initialize: async () => {
-    // 1. Show cached data immediately (feels instant)
+    if (get()._isInitialized) return;
+    set({ _isInitialized: true });
+
     await get()._loadCache();
 
-    // 2. Fetch fresh from Supabase
     set({ isSyncing: true });
     try {
       const addresses = await fetchAddresses();
@@ -88,7 +97,6 @@ export const useLocationStore = create((set, get) => ({
         isLoaded: true,
       });
 
-      // Update cache with fresh data
       await get()._saveCache();
     } catch {
       // Supabase unavailable — keep using cache
@@ -219,23 +227,16 @@ export const useLocationStore = create((set, get) => ({
   setLocation: async (addressData, coords) => {
     const { savedAddresses, selectedAddressId } = get();
 
-    // If we already have a selected address, UPDATE it instead of creating a new one
     if (savedAddresses.length > 0 && selectedAddressId) {
-      try {
-        await get().updateAddress(selectedAddressId, {
-          ...addressData,
-          latitude: coords?.latitude,
-          longitude: coords?.longitude,
-        });
-        // Update coords in store
-        if (coords) set({ coords });
-        return;
-      } catch {
-        // If update fails, fall through to create
-      }
+      await get().updateAddress(selectedAddressId, {
+        ...addressData,
+        latitude: coords?.latitude,
+        longitude: coords?.longitude,
+      });
+      if (coords) set({ coords });
+      return;
     }
 
-    // First time — create a Home address
     const homeData = {
       ...addressData,
       label: 'Home',

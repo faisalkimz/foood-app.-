@@ -4,10 +4,10 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { Text } from '../../src/components/ui';
-import { spacing, radius } from '../../src/theme';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { useLocationStore } from '../../src/store/locationStore';
+import { Text } from '@/components/ui';
+import { spacing, radius } from '@/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import { useLocationStore } from '@/store/locationStore';
 
 export default function LocationScreen() {
   const router = useRouter();

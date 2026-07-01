@@ -1,8 +1,8 @@
 import { Tabs, useRouter } from 'expo-router';
 import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { useCartStore } from '../../src/store';
+import { useTheme } from '@/providers/ThemeProvider';
+import { useCartStore } from '@/store';
 
 export default function TabsLayout() {
   const itemCount = useCartStore((s) => s.getItemCount());

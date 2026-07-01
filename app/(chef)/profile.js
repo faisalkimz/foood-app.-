@@ -3,12 +3,12 @@ import { View, StyleSheet, ScrollView, Pressable, Image, Alert } from 'react-nat
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { useAuthStore } from '../../src/store';
-import { spacing, radius } from '../../src/theme';
-import { signOut } from '../../src/services/authService';
-import { fetchChefStats, fetchMyRestaurant } from '../../src/services/restaurantService';
+import { Text } from '@/components/ui';
+import { useTheme } from '@/providers/ThemeProvider';
+import { useAuthStore } from '@/store';
+import { spacing, radius } from '@/theme';
+import { signOut } from '@/services/authService';
+import { fetchChefStats, fetchMyRestaurant } from '@/services/restaurantService';
 
 const menuSections = [
   {

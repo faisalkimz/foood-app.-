@@ -2,11 +2,12 @@ import { View, StyleSheet, Pressable, ScrollView, Image, Switch, ActionSheetIOS,
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { useAuthStore, useThemeStore } from '../../src/store';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { spacing, radius } from '../../src/theme';
-import { signOut } from '../../src/services/authService';
+import { Text, showToast } from '@/components/ui';
+import { useAuthStore, useThemeStore } from '@/store';
+import { useTheme } from '@/providers/ThemeProvider';
+import { spacing, radius } from '@/theme';
+import { signOut, updateProfile } from '@/services/authService';
+import { supabase } from '@/services/supabase';
 
 const menuSections = [
   {
@@ -21,6 +22,7 @@ const menuSections = [
       { icon: 'heart-outline', label: 'Favourite', route: '/profile/favourites' },
       { icon: 'notifications-outline', label: 'Notifications', route: '/profile/notifications' },
       { icon: 'card-outline', label: 'Payment Method', route: '/profile/payment-methods' },
+      { icon: 'restaurant-outline', label: 'Become a Chef', route: 'become-chef', isHighlighted: true },
     ],
   },
   {
@@ -58,6 +60,27 @@ export default function ProfileScreen() {
           },
         },
       ]);
+    } else if (item.route === 'become-chef') {
+      Alert.alert(
+        'Become a Chef',
+        'Switch your account to a chef role. You\'ll be able to set up your restaurant and manage orders.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Switch to Chef', style: 'destructive',
+            onPress: async () => {
+              try {
+                await supabase.from('profiles').update({ role: 'chef' }).eq('id', user.id);
+                useAuthStore.getState().login(user, 'chef');
+                showToast({ type: 'success', message: 'Welcome to the chef dashboard!' });
+                router.replace('/(chef)');
+              } catch {
+                showToast({ type: 'error', message: 'Could not switch role. Try again.' });
+              }
+            },
+          },
+        ]
+      );
     } else if (item.route) {
       router.push(item.route);
     }
@@ -144,7 +167,7 @@ export default function ProfileScreen() {
                 <Ionicons
                   name={item.icon}
                   size={20}
-                  color={item.isDestructive ? '#E74C3C' : c.primary}
+                  color={item.isDestructive ? '#E74C3C' : item.isHighlighted ? '#10B981' : c.primary}
                 />
                 <Text variant="body" style={[
                   styles.menuItemLabel,

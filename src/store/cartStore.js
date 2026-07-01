@@ -1,8 +1,34 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const CACHE_KEY = '@foodorder_cart_v4';
+const SCHEMA_VERSION = 2;
 
 export const useCartStore = create((set, get) => ({
   items: [],
   restaurantId: null,
+
+  _saveCache: async () => {
+    const { items, restaurantId } = get();
+    try {
+      await AsyncStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ _version: SCHEMA_VERSION, items, restaurantId })
+      );
+    } catch { /* non-critical */ }
+  },
+
+  _loadCache: async () => {
+    try {
+      const raw = await AsyncStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed._version === SCHEMA_VERSION) {
+          set({ items: parsed.items || [], restaurantId: parsed.restaurantId || null });
+        }
+      }
+    } catch { /* ignore */ }
+  },
 
   addItem: (item) => {
     const { items, restaurantId } = get();
@@ -26,6 +52,7 @@ export const useCartStore = create((set, get) => ({
         restaurantId: item.restaurantId,
       });
     }
+    get()._saveCache();
     return { error: null };
   },
 
@@ -35,6 +62,7 @@ export const useCartStore = create((set, get) => ({
       items,
       restaurantId: items.length === 0 ? null : get().restaurantId,
     });
+    get()._saveCache();
   },
 
   updateQuantity: (id, quantity) => {
@@ -45,9 +73,13 @@ export const useCartStore = create((set, get) => ({
     set({
       items: get().items.map((i) => (i.id === id ? { ...i, quantity } : i)),
     });
+    get()._saveCache();
   },
 
-  clearCart: () => set({ items: [], restaurantId: null }),
+  clearCart: () => {
+    set({ items: [], restaurantId: null });
+    get()._saveCache();
+  },
 
   getSubtotal: () =>
     get().items.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -55,3 +87,5 @@ export const useCartStore = create((set, get) => ({
   getItemCount: () =>
     get().items.reduce((sum, item) => sum + item.quantity, 0),
 }));
+
+useCartStore.getState()._loadCache();

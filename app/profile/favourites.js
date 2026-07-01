@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { View, StyleSheet, Pressable, FlatList, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Pressable, FlatList, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { fetchRestaurants } from '../../src/services/restaurantService';
-import { spacing, radius } from '../../src/theme';
+import { Text } from '@/components/ui';
+import { useTheme } from '@/providers/ThemeProvider';
+import { fetchRestaurants } from '@/services/restaurantService';
+import { spacing, radius } from '@/theme';
 
 export default function FavouritesScreen() {
   const router = useRouter();
@@ -43,6 +43,19 @@ export default function FavouritesScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      {isLoading ? (
+        <View style={styles.skeletonWrap}>
+          {[1, 2, 3].map((i) => (
+            <View key={i} style={[styles.skeletonCard, { backgroundColor: c.backgroundSecondary }]}>
+              <View style={[styles.skelImg, { backgroundColor: c.borderLight }]} />
+              <View style={styles.skelContent}>
+                <View style={[styles.skelLine, { backgroundColor: c.borderLight, width: '60%' }]} />
+                <View style={[styles.skelLine, { backgroundColor: c.borderLight, width: '40%' }]} />
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : (
       <FlatList
         data={favs}
         keyExtractor={(item) => item.id}
@@ -78,6 +91,7 @@ export default function FavouritesScreen() {
           </Pressable>
         )}
       />
+      )}
     </View>
   );
 }
@@ -99,4 +113,12 @@ const styles = StyleSheet.create({
   cardName: { fontWeight: '700', fontSize: 15 },
   cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   heartBtn: { padding: spacing.sm },
+  skeletonWrap: { paddingHorizontal: spacing.xl, gap: spacing.md },
+  skeletonCard: {
+    flexDirection: 'row', alignItems: 'center', padding: spacing.md,
+    borderRadius: radius.lg, gap: spacing.md,
+  },
+  skelImg: { width: 64, height: 64, borderRadius: radius.md },
+  skelContent: { flex: 1, gap: spacing.sm },
+  skelLine: { height: 14, borderRadius: 7 },
 });

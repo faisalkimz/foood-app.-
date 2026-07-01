@@ -6,10 +6,11 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, showToast } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { supabase } from '../../src/services/supabase';
-import { spacing, radius } from '../../src/theme';
+import { Text, showToast } from '@/components/ui';
+import { formatCurrency } from '@/utils/format';
+import { useTheme } from '@/providers/ThemeProvider';
+import { supabase } from '@/services/supabase';
+import { spacing, radius } from '@/theme';
 
 const Stars = ({ count, color, onPress }) => (
   <View style={{ flexDirection: 'row', gap: 2 }}>
@@ -101,14 +102,6 @@ export default function ReviewsScreen() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: c.background, alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color={c.primary} />
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
@@ -119,6 +112,19 @@ export default function ReviewsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      {isLoading ? (
+        <View style={styles.skeletonWrap}>
+          {[1, 2, 3].map((i) => (
+            <View key={i} style={[styles.skeletonCard, { backgroundColor: c.backgroundSecondary }]}>
+              <View style={[styles.skelImg, { backgroundColor: c.borderLight }]} />
+              <View style={styles.skelContent}>
+                <View style={[styles.skelLine, { backgroundColor: c.borderLight, width: '55%' }]} />
+                <View style={[styles.skelLine, { backgroundColor: c.borderLight, width: '35%' }]} />
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : (
       <FlatList
         data={reviews}
         keyExtractor={(item) => item.id}
@@ -150,7 +156,7 @@ export default function ReviewsScreen() {
               <View style={styles.reviewInfo}>
                 <Text variant="body" style={[styles.reviewName, { color: c.text }]}>{item.restaurant}</Text>
                 <Text variant="caption" style={{ color: c.textMuted }}>
-                  UGX {item.total.toLocaleString()} · {item.date}
+                  {formatCurrency(item.total)} · {item.date}
                 </Text>
               </View>
               <View style={[styles.reviewAction, { backgroundColor: c.primary + '20' }]}>
@@ -161,6 +167,7 @@ export default function ReviewsScreen() {
           </Pressable>
         )}
       />
+      )}
 
       {/* Review Modal */}
       <Modal visible={showReviewModal} animationType="slide" transparent>
@@ -272,4 +279,12 @@ const styles = StyleSheet.create({
   },
   submitBtn: { paddingVertical: spacing.base, borderRadius: radius.full, alignItems: 'center' },
   submitBtnText: { color: '#FFF', fontWeight: '700', fontSize: 16, letterSpacing: 0.5 },
+  skeletonWrap: { paddingHorizontal: spacing.xl, gap: spacing.md, paddingTop: spacing.md },
+  skeletonCard: {
+    flexDirection: 'row', alignItems: 'center', padding: spacing.base,
+    borderRadius: radius.lg, gap: spacing.md,
+  },
+  skelImg: { width: 48, height: 48, borderRadius: radius.md },
+  skelContent: { flex: 1, gap: spacing.sm },
+  skelLine: { height: 14, borderRadius: 7 },
 });

@@ -10,10 +10,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text, Button } from '../../src/components/ui';
-import { useAuthStore } from '../../src/store';
-import { spacing, radius } from '../../src/theme';
-import { useTheme } from '../../src/providers/ThemeProvider';
+import { Text, Button } from '@/components/ui';
+import { useAuthStore } from '@/store';
+import { spacing, radius } from '@/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 
 const { width, height } = Dimensions.get('window');
 

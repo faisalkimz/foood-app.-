@@ -8,20 +8,27 @@ export const useAuthStore = create((set, get) => ({
   isOnboarded: false,
   isAuthenticated: false,
   isLoading: true,   // true while restoring session on app start
+  _initialized: false,
 
   /** Called by _layout.js on app start — restores session from AsyncStorage */
   initialize: async () => {
+    if (get()._initialized) return;
+    set({ _initialized: true });
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        const profile = await getProfile(session.user.id);
-        set({
-          user: { ...session.user, ...profile },
-          role: profile.role || 'customer',
-          isAuthenticated: true,
-          isOnboarded: true,
-          isLoading: false,
-        });
+        try {
+          const profile = await getProfile(session.user.id);
+          set({
+            user: { ...session.user, ...profile },
+            role: profile.role || 'customer',
+            isAuthenticated: true,
+            isOnboarded: true,
+            isLoading: false,
+          });
+        } catch {
+          set({ user: session.user, isAuthenticated: true, isLoading: false });
+        }
       } else {
         set({ isLoading: false });
       }

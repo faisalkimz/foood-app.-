@@ -6,11 +6,14 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, showToast } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { supabase } from '../../src/services/supabase';
-import { updateMenuItem, deleteMenuItem } from '../../src/services/restaurantService';
-import { spacing, radius } from '../../src/theme';
+import * as ImagePicker from 'expo-image-picker';
+import { Text, showToast } from '@/components/ui';
+import { CURRENCY_SYMBOL } from '@/utils/format';
+import { useTheme } from '@/providers/ThemeProvider';
+import { supabase } from '@/services/supabase';
+import { updateMenuItem, deleteMenuItem } from '@/services/restaurantService';
+import { uploadImage } from '@/services/uploadService';
+import { spacing, radius } from '@/theme';
 
 const CATEGORIES = ['Main', 'Pizza', 'Burger', 'Salad', 'Chicken', 'Seafood', 'Sides', 'Dessert', 'Drinks'];
 
@@ -23,6 +26,7 @@ export default function EditItemScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
+  const [imageLocal, setImageLocal] = useState(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -50,6 +54,24 @@ export default function EditItemScreen() {
     })();
   }, [id]);
 
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      showToast({ type: 'warning', message: 'Gallery permission needed.' });
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.7,
+    });
+    if (!result.canceled) {
+      setImageLocal(result.assets[0].uri);
+      setImageUrl('');
+    }
+  };
+
   const handleSave = async () => {
     if (!name || !price) {
       Alert.alert('Missing Info', 'Please fill in name and price');
@@ -57,12 +79,21 @@ export default function EditItemScreen() {
     }
     setIsSaving(true);
     try {
+      let finalImage = imageUrl;
+      if (imageLocal) {
+        try {
+          finalImage = await uploadImage(imageLocal, 'menu-items');
+        } catch {
+          showToast({ type: 'warning', message: 'Image upload failed, using local URI.' });
+          finalImage = imageLocal;
+        }
+      }
       await updateMenuItem(id, {
         name,
         description,
         price: parseFloat(price),
         category,
-        image: imageUrl,
+        image: finalImage,
       });
       showToast({ type: 'success', message: `${name} updated!` });
       router.back();
@@ -116,7 +147,16 @@ export default function EditItemScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.previewImage} /> : null}
+        <Pressable onPress={pickImage} style={styles.previewWrap}>
+          <Image
+            source={{ uri: imageLocal || imageUrl || `https://ui-avatars.com/api/?name=Food&background=FF6B35&color=fff&size=400` }}
+            style={styles.previewImage}
+          />
+          <View style={styles.coverOverlay}>
+            <Ionicons name="camera" size={18} color="#FFF" />
+            <Text variant="caption" style={{ color: '#FFF', fontWeight: '700' }}>Change Photo</Text>
+          </View>
+        </Pressable>
 
         <View style={styles.form}>
           <View style={styles.fieldGroup}>
@@ -137,7 +177,7 @@ export default function EditItemScreen() {
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>PRICE (UGX)</Text>
+            <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>PRICE ({CURRENCY_SYMBOL})</Text>
             <TextInput
               style={[styles.input, { backgroundColor: c.backgroundSecondary, borderColor: c.border, color: c.text }]}
               value={price} onChangeText={setPrice}
@@ -145,14 +185,6 @@ export default function EditItemScreen() {
             />
           </View>
 
-          <View style={styles.fieldGroup}>
-            <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>IMAGE URL</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: c.backgroundSecondary, borderColor: c.border, color: c.text }]}
-              value={imageUrl} onChangeText={setImageUrl}
-              placeholder="https://..." placeholderTextColor={c.textMuted} autoCapitalize="none"
-            />
-          </View>
 
           <View style={styles.fieldGroup}>
             <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>CATEGORY</Text>
@@ -202,7 +234,14 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: spacing.xl, gap: spacing.xl },
+  previewWrap: { borderRadius: radius.lg, overflow: 'hidden' },
   previewImage: { width: '100%', height: 180, borderRadius: radius.lg },
+  coverOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
   form: { gap: spacing.lg },
   fieldGroup: { gap: spacing.xs },
   fieldLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },

@@ -7,10 +7,12 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Text, showToast } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { spacing, radius } from '../../src/theme';
-import { fetchMyRestaurant, updateMyRestaurant } from '../../src/services/restaurantService';
+import { Text, showToast } from '@/components/ui';
+import { CURRENCY_SYMBOL } from '@/utils/format';
+import { useTheme } from '@/providers/ThemeProvider';
+import { spacing, radius } from '@/theme';
+import { fetchMyRestaurant, updateMyRestaurant } from '@/services/restaurantService';
+import { uploadImage } from '@/services/uploadService';
 
 export default function RestaurantInfoScreen() {
   const router = useRouter();
@@ -87,6 +89,15 @@ export default function RestaurantInfoScreen() {
     }
     setIsSaving(true);
     try {
+      let finalImage = imageUri;
+      if (imageUri && imageUri.startsWith('file://')) {
+        try {
+          finalImage = await uploadImage(imageUri, 'restaurants');
+        } catch {
+          showToast({ type: 'warning', message: 'Image upload failed, using local URI.' });
+          finalImage = imageUri;
+        }
+      }
       await updateMyRestaurant({
         name: name.trim(),
         description: description.trim(),
@@ -97,7 +108,7 @@ export default function RestaurantInfoScreen() {
         address: address.trim(),
         openingHours: openingHours.trim(),
         isActive,
-        image: imageUri,
+        image: finalImage,
       });
       showToast({ type: 'success', message: 'Restaurant info updated!' });
       router.back();
@@ -151,7 +162,7 @@ export default function RestaurantInfoScreen() {
 
           <View style={styles.timeRow}>
             {field('DELIVERY TIME (min)', deliveryTime, setDeliveryTime, { keyboardType: 'number-pad', placeholder: '30' }, true)}
-            {field('DELIVERY FEE (UGX)', deliveryFee, setDeliveryFee, { keyboardType: 'decimal-pad', placeholder: '0' }, true)}
+            {field(`DELIVERY FEE (${CURRENCY_SYMBOL})`, deliveryFee, setDeliveryFee, { keyboardType: 'decimal-pad', placeholder: '0' }, true)}
           </View>
 
           {field('PHONE NUMBER', phone, setPhone, { keyboardType: 'phone-pad', placeholder: '+256 700 000 000' })}

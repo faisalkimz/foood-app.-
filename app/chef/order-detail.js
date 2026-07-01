@@ -1,20 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, StyleSheet, ScrollView, Pressable, Image, Alert,
-  ActivityIndicator,
+  ActivityIndicator, TextInput, FlatList, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, showToast } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { supabase } from '../../src/services/supabase';
-import { updateOrderStatus } from '../../src/services/restaurantService';
-import { spacing, radius } from '../../src/theme';
+import { Text, showToast } from '@/components/ui';
+import { ChatMessage } from '@/components/shared';
+import { formatCurrency } from '@/utils/format';
+import { useTheme } from '@/providers/ThemeProvider';
+import { supabase } from '@/services/supabase';
+import { updateOrderStatus } from '@/services/restaurantService';
+import { spacing, radius } from '@/theme';
 
 const STEPS = [
-  { key: 'received', label: 'Order Received', icon: 'receipt' },
-  { key: 'accepted', label: 'Accepted', icon: 'checkmark-circle' },
+  { key: 'pending', label: 'Order Received', icon: 'receipt' },
+  { key: 'confirmed', label: 'Accepted', icon: 'checkmark-circle' },
   { key: 'preparing', label: 'Preparing', icon: 'flame' },
   { key: 'ready', label: 'Ready', icon: 'bag-check' },
   { key: 'delivered', label: 'Delivered', icon: 'bicycle' },
@@ -32,19 +34,36 @@ const NEXT_STATUS = {
   3: { label: 'CONFIRM DELIVERY', next: 'delivered' },
 };
 
+function formatTime(iso) {
+  const d = iso ? new Date(iso) : new Date();
+  const h = d.getHours();
+  const m = d.getMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'pm' : 'am';
+  return `${h % 12 || 12}:${m}${ampm}`;
+}
+
 export default function ChefOrderDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const c = useTheme();
+  const flatListRef = useRef(null);
 
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const chatChannelRef = useRef(null);
 
   useEffect(() => {
     (async () => {
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) setCurrentUserId(user.id);
+
         const { data, error } = await supabase
           .from('orders')
           .select(`
@@ -81,9 +100,86 @@ export default function ChefOrderDetailScreen() {
     })();
   }, [id]);
 
+  // Load existing chat messages
+  useEffect(() => {
+    if (!id || !currentUserId) return;
+    (async () => {
+      const { data: existingMessages } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('order_id', id)
+        .order('created_at', { ascending: true });
+
+      if (existingMessages) {
+        setMessages(existingMessages.map(msg => ({
+          id: msg.id,
+          text: msg.message,
+          sender: msg.sender_id === currentUserId ? 'me' : 'customer',
+          time: formatTime(msg.created_at),
+        })));
+      }
+    })();
+  }, [id, currentUserId]);
+
+  useEffect(() => {
+    if (!id) return;
+    if (chatChannelRef.current) return;
+
+    const channel = supabase
+      .channel(`chef-chat-${id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `order_id=eq.${id}`,
+      }, (payload) => {
+        const newMsg = payload.new;
+        setMessages((prev) => {
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          return [...prev, {
+            id: newMsg.id,
+            text: newMsg.message,
+            sender: newMsg.sender_id === currentUserId ? 'me' : 'customer',
+            time: formatTime(newMsg.created_at),
+          }];
+        });
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      })
+      .subscribe();
+
+    chatChannelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+      chatChannelRef.current = null;
+    };
+  }, [id, currentUserId]);
+
+  useEffect(() => {
+    if (showChat) {
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 300);
+    }
+  }, [showChat, messages.length]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    const text = input.trim();
+    setInput('');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase.from('chat_messages').insert({
+        order_id: id,
+        sender_id: user.id,
+        message: text,
+      });
+    } catch { /* silent */ }
+  };
+
   const currentStep = order ? getStepIndex(order.status) : 0;
 
   const handleNextStep = async () => {
+    if (!order) return;
     const nextInfo = NEXT_STATUS[currentStep];
     if (!nextInfo || isSaving) return;
     setIsSaving(true);
@@ -131,110 +227,159 @@ export default function ChefOrderDetailScreen() {
           <Ionicons name="arrow-back" size={22} color={c.text} />
         </Pressable>
         <Text variant="h3" style={{ color: c.text }}>Order #{order.id.slice(-6).toUpperCase()}</Text>
-        <View style={{ width: 40 }} />
+        <Pressable
+          onPress={() => setShowChat(!showChat)}
+          style={[styles.chatToggleBtn, { backgroundColor: showChat ? c.primary : c.backgroundSecondary }]}
+        >
+          <Ionicons name="chatbubble" size={20} color={showChat ? '#FFF' : c.primary} />
+        </Pressable>
       </View>
 
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Customer info */}
-        <View style={[styles.customerCard, { backgroundColor: c.backgroundSecondary }]}>
-          <Image
-            source={{ uri: order.customerImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(order.customer)}&background=FF6B35&color=fff` }}
-            style={styles.avatar}
-          />
-          <View style={styles.customerInfo}>
-            <Text variant="body" style={[styles.customerName, { color: c.text }]}>{order.customer}</Text>
-            {order.address ? (
-              <View style={styles.addressRow}>
-                <Ionicons name="location" size={14} color={c.primary} />
-                <Text variant="caption" style={{ color: c.textMuted, flex: 1 }}>{order.address}</Text>
-              </View>
-            ) : null}
-          </View>
-        </View>
-
-        {/* Status timeline */}
-        <View style={[styles.timelineCard, { backgroundColor: c.backgroundSecondary }]}>
-          <Text variant="label" style={[styles.sectionLabel, { color: c.textMuted }]}>ORDER STATUS</Text>
-          {STEPS.map((step, idx) => {
-            const isActive = idx <= currentStep;
-            const isLast = idx === STEPS.length - 1;
-            return (
-              <View key={step.key} style={styles.timelineStep}>
-                <View style={styles.timelineLeft}>
-                  <View style={[styles.timelineDot, { backgroundColor: isActive ? c.primary : c.border }]}>
-                    <Ionicons name={step.icon} size={14} color={isActive ? '#FFF' : c.textMuted} />
-                  </View>
-                  {!isLast && (
-                    <View style={[styles.timelineLine, { backgroundColor: isActive ? c.primary : c.border }]} />
-                  )}
-                </View>
-                <Text variant="body" style={[
-                  styles.timelineLabel,
-                  { color: isActive ? c.text : c.textMuted },
-                  isActive && { fontWeight: '700' },
-                ]}>
-                  {step.label}
+      {showChat ? (
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={0}
+        >
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => <ChatMessage item={item} isMe={item.sender === 'me'} c={c} />}
+            contentContainerStyle={[chatStyles.messagesList, { paddingBottom: spacing.md }]}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={chatStyles.emptyChat}>
+                <Ionicons name="chatbubbles-outline" size={40} color={c.textMuted} />
+                <Text variant="body" style={{ color: c.textMuted, textAlign: 'center', marginTop: spacing.sm }}>
+                  No messages yet. Say hello to your customer!
                 </Text>
               </View>
-            );
-          })}
-        </View>
-
-        {/* Order items */}
-        <View style={[styles.itemsCard, { backgroundColor: c.backgroundSecondary }]}>
-          <Text variant="label" style={[styles.sectionLabel, { color: c.textMuted }]}>ORDER ITEMS</Text>
-          {order.items.map((item, idx) => (
-            <View
-              key={idx}
-              style={[styles.itemRow, idx < order.items.length - 1 && { borderBottomWidth: 1, borderBottomColor: c.borderLight }]}
-            >
-              <View style={styles.itemLeft}>
-                <View style={[styles.qtyBadge, { backgroundColor: c.primary + '20' }]}>
-                  <Text variant="caption" style={{ color: c.primary, fontWeight: '800' }}>{item.qty}x</Text>
-                </View>
-                <Text variant="body" style={{ color: c.text, fontWeight: '500' }}>{item.name}</Text>
-              </View>
-              <Text variant="body" style={{ color: c.text, fontWeight: '700' }}>UGX {item.price.toLocaleString()}</Text>
-            </View>
-          ))}
-          <View style={[styles.totalRow, { borderTopColor: c.border }]}>
-            <Text variant="h3" style={{ color: c.text }}>Total</Text>
-            <Text variant="h3" style={{ color: c.primary }}>UGX {order.total.toLocaleString()}</Text>
-          </View>
-        </View>
-
-        {/* Special note */}
-        {order.notes ? (
-          <View style={[styles.noteCard, { backgroundColor: '#FFF7ED', borderColor: '#FDBA7420' }]}>
-            <Ionicons name="chatbubble-ellipses" size={18} color="#F59E0B" />
-            <View style={{ flex: 1 }}>
-              <Text variant="label" style={{ color: '#92400E', fontSize: 11 }}>SPECIAL INSTRUCTIONS</Text>
-              <Text variant="body" style={{ color: '#78350F', marginTop: 2 }}>{order.notes}</Text>
+            }
+          />
+          <View style={[chatStyles.inputBar, { paddingBottom: insets.bottom + spacing.sm, backgroundColor: c.background, borderTopColor: c.borderLight }]}>
+            <View style={[chatStyles.inputWrap, { backgroundColor: c.backgroundSecondary, borderColor: c.border }]}>
+              <TextInput
+                style={[chatStyles.textInput, { color: c.text }]}
+                placeholder="Reply to customer..."
+                placeholderTextColor={c.textMuted}
+                value={input}
+                onChangeText={setInput}
+                onSubmitEditing={handleSend}
+                returnKeyType="send"
+              />
+              <Pressable onPress={handleSend} hitSlop={8}>
+                <Ionicons name="send" size={20} color={input.trim() ? c.primary : c.textMuted} />
+              </Pressable>
             </View>
           </View>
-        ) : null}
-      </ScrollView>
-
-      {/* Action button */}
-      {currentStep < STEPS.length - 1 && NEXT_STATUS[currentStep] && (
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background }]}>
-          <Pressable
-            style={[styles.actionBtn, { backgroundColor: c.primary, opacity: isSaving ? 0.6 : 1 }]}
-            onPress={handleNextStep}
-            disabled={isSaving}
+        </KeyboardAvoidingView>
+      ) : (
+        <>
+          <ScrollView
+            contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
+            showsVerticalScrollIndicator={false}
           >
-            {isSaving ? (
-              <ActivityIndicator size="small" color="#FFF" />
-            ) : (
-              <Text variant="body" style={styles.actionBtnText}>
-                {NEXT_STATUS[currentStep].label}
-              </Text>
-            )}
-          </Pressable>
-        </View>
+            <View style={[styles.customerCard, { backgroundColor: c.backgroundSecondary }]}>
+              <Image
+                source={{ uri: order.customerImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(order.customer)}&background=FF6B35&color=fff` }}
+                style={styles.avatar}
+              />
+              <View style={styles.customerInfo}>
+                <Text variant="body" style={[styles.customerName, { color: c.text }]}>{order.customer}</Text>
+                {order.customerPhone ? (
+                  <View style={styles.addressRow}>
+                    <Ionicons name="call-outline" size={14} color={c.primary} />
+                    <Text variant="caption" style={{ color: c.textMuted }}>{order.customerPhone}</Text>
+                  </View>
+                ) : null}
+                {order.address ? (
+                  <View style={styles.addressRow}>
+                    <Ionicons name="location" size={14} color={c.primary} />
+                    <Text variant="caption" style={{ color: c.textMuted, flex: 1 }}>{order.address}</Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+
+            <View style={[styles.timelineCard, { backgroundColor: c.backgroundSecondary }]}>
+              <Text variant="label" style={[styles.sectionLabel, { color: c.textMuted }]}>ORDER STATUS</Text>
+              {STEPS.map((step, idx) => {
+                const isActive = idx <= currentStep;
+                const isLast = idx === STEPS.length - 1;
+                return (
+                  <View key={step.key} style={styles.timelineStep}>
+                    <View style={styles.timelineLeft}>
+                      <View style={[styles.timelineDot, { backgroundColor: isActive ? c.primary : c.border }]}>
+                        <Ionicons name={step.icon} size={14} color={isActive ? '#FFF' : c.textMuted} />
+                      </View>
+                      {!isLast && (
+                        <View style={[styles.timelineLine, { backgroundColor: isActive ? c.primary : c.border }]} />
+                      )}
+                    </View>
+                    <Text variant="body" style={[
+                      styles.timelineLabel,
+                      { color: isActive ? c.text : c.textMuted },
+                      isActive && { fontWeight: '700' },
+                    ]}>
+                      {step.label}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            <View style={[styles.itemsCard, { backgroundColor: c.backgroundSecondary }]}>
+              <Text variant="label" style={[styles.sectionLabel, { color: c.textMuted }]}>ORDER ITEMS</Text>
+              {order.items.map((item, idx) => (
+                <View
+                  key={idx}
+                  style={[styles.itemRow, idx < order.items.length - 1 && { borderBottomWidth: 1, borderBottomColor: c.borderLight }]}
+                >
+                  <View style={styles.itemLeft}>
+                    <View style={[styles.qtyBadge, { backgroundColor: c.primary + '20' }]}>
+                      <Text variant="caption" style={{ color: c.primary, fontWeight: '800' }}>{item.qty}x</Text>
+                    </View>
+                    <Text variant="body" style={{ color: c.text, fontWeight: '500' }}>{item.name}</Text>
+                  </View>
+                  <Text variant="body" style={{ color: c.text, fontWeight: '700' }}>{formatCurrency(item.price)}</Text>
+                </View>
+              ))}
+              <View style={[styles.totalRow, { borderTopColor: c.border }]}>
+                <Text variant="h3" style={{ color: c.text }}>Total</Text>
+                <Text variant="h3" style={{ color: c.primary }}>{formatCurrency(order.total)}</Text>
+              </View>
+            </View>
+
+            {order.notes ? (
+              <View style={[styles.noteCard, { backgroundColor: '#FFF7ED', borderColor: '#FDBA7420' }]}>
+                <Ionicons name="chatbubble-ellipses" size={18} color="#F59E0B" />
+                <View style={{ flex: 1 }}>
+                  <Text variant="label" style={{ color: '#92400E', fontSize: 11 }}>SPECIAL INSTRUCTIONS</Text>
+                  <Text variant="body" style={{ color: '#78350F', marginTop: 2 }}>{order.notes}</Text>
+                </View>
+              </View>
+            ) : null}
+          </ScrollView>
+
+          {currentStep < STEPS.length - 1 && NEXT_STATUS[currentStep] && (
+            <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background }]}>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: c.primary, opacity: isSaving ? 0.6 : 1 }]}
+                onPress={handleNextStep}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text variant="body" style={styles.actionBtnText}>
+                    {NEXT_STATUS[currentStep].label}
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          )}
+        </>
       )}
     </View>
   );
@@ -247,6 +392,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl, paddingBottom: spacing.md,
   },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  chatToggleBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
   content: { paddingHorizontal: spacing.xl, gap: spacing.md },
   customerCard: {
@@ -285,4 +431,18 @@ const styles = StyleSheet.create({
   },
   actionBtn: { paddingVertical: spacing.base, borderRadius: radius.full, alignItems: 'center' },
   actionBtnText: { color: '#FFF', fontWeight: '700', fontSize: 16, letterSpacing: 0.5 },
+});
+
+const chatStyles = StyleSheet.create({
+  messagesList: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, flexGrow: 1 },
+  emptyChat: { alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
+  inputBar: {
+    paddingHorizontal: spacing.xl, paddingTop: spacing.sm, borderTopWidth: 1,
+  },
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: radius.full, borderWidth: 1,
+    paddingHorizontal: spacing.base, gap: spacing.sm,
+  },
+  textInput: { flex: 1, paddingVertical: spacing.md, fontSize: 15 },
 });

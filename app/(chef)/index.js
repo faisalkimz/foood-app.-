@@ -6,11 +6,12 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { useAuthStore } from '../../src/store';
-import { fetchChefStats, fetchMyOrders } from '../../src/services/restaurantService';
-import { spacing, radius } from '../../src/theme';
+import { Text } from '@/components/ui';
+import { useTheme } from '@/providers/ThemeProvider';
+import { useAuthStore } from '@/store';
+import { fetchChefStats, fetchMyOrders } from '@/services/restaurantService';
+import { spacing, radius } from '@/theme';
+import { formatCurrency } from '@/utils/format';
 
 const STATUS_COLORS = {
   pending: '#6B7280',
@@ -101,7 +102,7 @@ export default function ChefDashboard() {
             <View style={styles.statsGrid}>
               {[
                 { icon: 'receipt', color: '#3B82F6', bg: '#EFF6FF', value: stats?.todayOrders ?? 0, label: "Today's Orders" },
-                { icon: 'cash', color: '#10B981', bg: '#F0FDF4', value: `UGX ${(stats?.todayRevenue ?? 0).toLocaleString()}`, label: 'Revenue' },
+                { icon: 'cash', color: '#10B981', bg: '#F0FDF4', value: formatCurrency(stats?.todayRevenue ?? 0), label: 'Revenue' },
                 { icon: 'flame', color: '#F59E0B', bg: '#FFF7ED', value: stats?.activeOrders ?? 0, label: 'Active' },
                 { icon: 'star', color: '#EF4444', bg: '#FEF2F2', value: stats?.avgRating > 0 ? stats.avgRating.toFixed(1) : 'New', label: 'Rating' },
               ].map(({ icon, color, bg, value, label }) => (
@@ -169,7 +170,7 @@ export default function ChefDashboard() {
                   </View>
                   <View style={styles.orderRight}>
                     <Text variant="body" style={[styles.orderTotal, { color: c.text }]}>
-                      UGX {order.total.toLocaleString()}
+                      {formatCurrency(order.total)}
                     </Text>
                     <View style={[styles.statusPill, { backgroundColor: (STATUS_COLORS[order.status] || '#6B7280') + '20' }]}>
                       <Text variant="caption" style={{ color: STATUS_COLORS[order.status] || '#6B7280', fontWeight: '700', fontSize: 11 }}>

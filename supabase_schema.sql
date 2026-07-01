@@ -40,14 +40,18 @@ CREATE TABLE public.restaurants (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     chef_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
-    description TEXT,
+    description TEXT DEFAULT '',
     cuisine TEXT NOT NULL,
     rating NUMERIC(3,2) DEFAULT 0.00,
     delivery_fee NUMERIC(10,2) DEFAULT 0.00,
     free_delivery BOOLEAN DEFAULT false,
     delivery_time INTEGER NOT NULL,
-    image_url TEXT,
+    image_url TEXT DEFAULT '',
     is_active BOOLEAN DEFAULT true,
+    address TEXT DEFAULT '',
+    phone TEXT DEFAULT '',
+    opening_hours TEXT DEFAULT '08:00 - 22:00',
+    min_order NUMERIC(10,2) DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -98,15 +102,14 @@ CREATE TABLE public.order_items (
 );
 
 -- ==========================================
--- 6. FAVORITES TABLE
+-- 6. FAVOURITES TABLE
 -- ==========================================
-CREATE TABLE public.favorites (
+CREATE TABLE public.favourites (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    customer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-    restaurant_id UUID REFERENCES public.restaurants(id) ON DELETE CASCADE,
-    menu_item_id UUID REFERENCES public.menu_items(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    restaurant_id UUID REFERENCES public.restaurants(id) ON DELETE CASCADE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    CHECK (restaurant_id IS NOT NULL OR menu_item_id IS NOT NULL)
+    UNIQUE(user_id, restaurant_id)
 );
 
 -- ==========================================
@@ -130,7 +133,7 @@ ALTER TABLE public.restaurants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.menu_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.favourites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_addresses ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: Users can read everyone, but only update themselves
@@ -173,8 +176,8 @@ CREATE POLICY "Chefs view own restaurant order items." ON public.order_items FOR
   )
 );
 
--- Favorites
-CREATE POLICY "Users manage own favorites." ON public.favorites FOR ALL USING (auth.uid() = customer_id);
+-- Favourites
+CREATE POLICY "Users manage own favourites." ON public.favourites FOR ALL USING (auth.uid() = user_id);
 
 -- User Addresses
 CREATE POLICY "Users manage own addresses." ON public.user_addresses FOR ALL USING (auth.uid() = customer_id);
@@ -188,7 +191,6 @@ CREATE INDEX idx_orders_customer ON public.orders(customer_id);
 CREATE INDEX idx_orders_restaurant ON public.orders(restaurant_id);
 CREATE INDEX idx_orders_status ON public.orders(status);
 CREATE INDEX idx_order_items_order ON public.order_items(order_id);
-CREATE INDEX idx_favorites_customer ON public.favorites(customer_id);
+CREATE INDEX idx_favourites_user ON public.favourites(user_id);
 CREATE UNIQUE INDEX idx_addresses_single_default ON public.user_addresses(customer_id) WHERE is_default = true;
-CREATE UNIQUE INDEX idx_favorites_restaurant ON public.favorites(customer_id, restaurant_id) WHERE restaurant_id IS NOT NULL;
-CREATE UNIQUE INDEX idx_favorites_menu_item ON public.favorites(customer_id, menu_item_id) WHERE menu_item_id IS NOT NULL;
+CREATE UNIQUE INDEX idx_favourites_restaurant ON public.favourites(user_id, restaurant_id);

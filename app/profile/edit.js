@@ -4,11 +4,12 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Text, showToast } from '../../src/components/ui';
-import { useAuthStore } from '../../src/store';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { updateProfile } from '../../src/services/authService';
-import { spacing, radius } from '../../src/theme';
+import { Text, showToast } from '@/components/ui';
+import { useAuthStore } from '@/store';
+import { useTheme } from '@/providers/ThemeProvider';
+import { updateProfile } from '@/services/authService';
+import { uploadImage } from '@/services/uploadService';
+import { spacing, radius } from '@/theme';
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -70,15 +71,26 @@ export default function EditProfileScreen() {
     }
     setIsSaving(true);
     try {
+      let finalAvatar = avatarUri;
+      if (avatarUri && avatarUri.startsWith('file://')) {
+        try {
+          finalAvatar = await uploadImage(avatarUri, 'avatars');
+        } catch {
+          showToast({ type: 'warning', message: 'Avatar upload failed.' });
+          finalAvatar = avatarUri;
+        }
+      }
       await updateProfile(user.id, {
         full_name: name.trim(),
         phone_number: phone.trim(),
+        avatar_url: finalAvatar,
         bio: bio.trim(),
       });
       updateUser({
         full_name: name.trim(),
         name: name.trim(),
         phone_number: phone.trim(),
+        avatar_url: finalAvatar,
         bio: bio.trim(),
       });
       showToast({ type: 'success', message: 'Profile updated!' });

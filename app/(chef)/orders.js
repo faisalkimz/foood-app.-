@@ -6,10 +6,11 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, showToast } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { fetchMyOrders, updateOrderStatus } from '../../src/services/restaurantService';
-import { spacing, radius } from '../../src/theme';
+import { Text, showToast } from '@/components/ui';
+import { formatCurrency } from '@/utils/format';
+import { useTheme } from '@/providers/ThemeProvider';
+import { fetchMyOrders, updateOrderStatus } from '@/services/restaurantService';
+import { spacing, radius } from '@/theme';
 
 const TABS = ['pending', 'preparing', 'delivered'];
 const TAB_LABELS = { pending: 'New', preparing: 'Preparing', delivered: 'Completed' };
@@ -87,13 +88,13 @@ export default function ChefOrdersScreen() {
           <Text variant="body" style={[styles.customerName, { color: c.text }]}>{item.customer}</Text>
           <Text variant="caption" style={{ color: c.textMuted }} numberOfLines={1}>{item.address}</Text>
         </View>
-        <Text variant="h3" style={[styles.total, { color: c.primary }]}>UGX {item.total.toLocaleString()}</Text>
+        <Text variant="h3" style={[styles.total, { color: c.primary }]}>{formatCurrency(item.total)}</Text>
       </View>
 
       <View style={[styles.itemsList, { borderTopColor: c.borderLight }]}>
         {item.items.map((i, idx) => (
           <Text key={idx} variant="bodySmall" style={{ color: c.textSecondary }}>
-            {i.qty}x {i.name} — UGX {i.price.toLocaleString()}
+            {i.qty}x {i.name} — {formatCurrency(i.price)}
           </Text>
         ))}
         {item.notes ? (

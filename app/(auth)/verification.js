@@ -6,12 +6,12 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { showToast } from '../../src/components/ui';
-import { spacing, radius } from '../../src/theme';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { verifyOTP, signInWithOTP, signUpWithOTP, getProfile, updateProfile } from '../../src/services/authService';
-import { useAuthStore } from '../../src/store/authStore';
+import { Text } from '@/components/ui';
+import { showToast } from '@/components/ui';
+import { spacing, radius } from '@/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import { verifyOTP, signInWithOTP, signUpWithOTP, getProfile, updateProfile } from '@/services/authService';
+import { useAuthStore } from '@/store/authStore';
 
 const CODE_LENGTH = 6;
 

@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Pressable, Image, ActivityIndicator, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { supabase } from '../../src/services/supabase';
-import { fetchOrder } from '../../src/services/orderService';
-import { spacing, radius } from '../../src/theme';
+import { Text } from '@/components/ui';
+import { useTheme } from '@/providers/ThemeProvider';
+import { supabase } from '@/services/supabase';
+import { fetchOrder } from '@/services/orderService';
+import { spacing, radius } from '@/theme';
+import { formatCurrency } from '@/utils/format';
 
 const STATUS_STEPS = [
   { key: 'pending', label: 'Order Placed', icon: 'receipt', color: '#6B7280' },
@@ -43,6 +44,7 @@ export default function TrackOrderScreen() {
 
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const channelRef = useRef(null);
 
   // Fetch order on mount
   useEffect(() => {
@@ -76,9 +78,9 @@ export default function TrackOrderScreen() {
     })();
   }, [id]);
 
-  // Real-time subscription for status changes
   useEffect(() => {
     if (!order?.id) return;
+    if (channelRef.current) return;
 
     const channel = supabase
       .channel(`order-${order.id}`)
@@ -94,8 +96,11 @@ export default function TrackOrderScreen() {
       })
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
       supabase.removeChannel(channel);
+      channelRef.current = null;
     };
   }, [order?.id]);
 
@@ -249,18 +254,18 @@ export default function TrackOrderScreen() {
                 </View>
                 <Text variant="body" style={{ color: c.text, fontWeight: '500' }}>{item.name || 'Item'}</Text>
               </View>
-              <Text variant="body" style={{ color: c.text, fontWeight: '700' }}>UGX {(item.price || 0).toLocaleString()}</Text>
+              <Text variant="body" style={{ color: c.text, fontWeight: '700' }}>{formatCurrency(item.price || 0)}</Text>
             </View>
           ))}
           <View style={[styles.totalRow, { borderTopColor: c.border }]}>
             <Text variant="body" style={{ color: c.textMuted }}>Delivery Fee</Text>
             <Text variant="body" style={{ color: c.text, fontWeight: '600' }}>
-              {(order.deliveryFee || 0) > 0 ? `UGX ${(order.deliveryFee).toLocaleString()}` : 'Free'}
+              {(order.deliveryFee || 0) > 0 ? formatCurrency(order.deliveryFee) : 'Free'}
             </Text>
           </View>
           <View style={styles.feeRow}>
             <Text variant="h3" style={{ color: c.text }}>Total</Text>
-            <Text variant="h3" style={{ color: c.primary }}>UGX {(order.total || 0).toLocaleString()}</Text>
+            <Text variant="h3" style={{ color: c.primary }}>{formatCurrency(order.total || 0)}</Text>
           </View>
         </View>
 

@@ -8,6 +8,11 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "scheme": "foodorder",
+    "extra": {
+      "eas": {
+        "projectId": "6cbbc866-396d-4399-af54-eb38e88bacc2"
+      }
+    },
     "ios": {
       "supportsTablet": true
     },
@@ -38,6 +43,13 @@
         {
           "photosPermission": "Allow Foodorder to access your photos so you can upload a profile picture or add food item images.",
           "cameraPermission": "Allow Foodorder to use your camera to take photos for your profile or food items."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#FF6B35"
         }
       ]
     ]

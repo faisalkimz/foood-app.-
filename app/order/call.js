@@ -4,9 +4,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { Text } from '../../src/components/ui';
-import { supabase } from '../../src/services/supabase';
-import { spacing } from '../../src/theme';
+import { Text } from '@/components/ui';
+import { supabase } from '@/services/supabase';
+import { spacing } from '@/theme';
+import { FALLBACK_CONTACT } from '@/constants';
 
 export default function CallingScreen() {
   const router = useRouter();
@@ -39,6 +40,8 @@ export default function CallingScreen() {
         }
       } catch {
         // fallback to defaults
+        setContactName(FALLBACK_CONTACT.name);
+        setContactPhoto(FALLBACK_CONTACT.image_url);
       }
     })();
   }, [orderId]);

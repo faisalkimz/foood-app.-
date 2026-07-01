@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { View, StyleSheet, Image, ScrollView, Pressable, Alert, Modal, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Image, ScrollView, Pressable, Alert, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { useCartStore } from '../../src/store';
-import { useLocationStore } from '../../src/store/locationStore';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { spacing, radius } from '../../src/theme';
+import { Text } from '@/components/ui';
+import { useCartStore } from '@/store';
+import { useLocationStore } from '@/store/locationStore';
+import { useTheme } from '@/providers/ThemeProvider';
+import { spacing, radius } from '@/theme';
+import { formatCurrency } from '@/utils/format';
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -59,13 +60,13 @@ export default function CheckoutScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: c.splashDark }]}>
+    <View       style={[styles.container, { backgroundColor: c.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={c.textInverse} />
+        <Pressable onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: c.backgroundSecondary }]}>
+          <Ionicons name="arrow-back" size={22} color={c.text} />
         </Pressable>
-        <Text variant="h3" style={[styles.headerTitle, { color: c.textInverse }]}>Cart</Text>
+        <Text variant="h3" style={[styles.headerTitle, { color: c.text }]}>Cart</Text>
         <Pressable hitSlop={8} onPress={() => router.back()}>
           <Text variant="bodySmall" style={[styles.editText, { color: c.primary }]}>EDIT ITEMS</Text>
         </Pressable>
@@ -87,7 +88,7 @@ export default function CheckoutScreen() {
                   </Pressable>
                 </View>
                 <Text variant="h3" style={[styles.itemPrice, { color: c.primary }]}>
-                  UGX {(item.price * item.quantity).toLocaleString()}
+                  {formatCurrency(item.price * item.quantity)}
                 </Text>
                 <View style={styles.itemControls}>
                   <Text variant="caption" style={styles.sizeLabel}>x{item.quantity}</Text>
@@ -163,17 +164,17 @@ export default function CheckoutScreen() {
         <View style={[styles.totalsCard, { backgroundColor: c.backgroundSecondary }]}>
           <View style={styles.totalRow}>
             <Text variant="body" style={{ color: c.textSecondary }}>Subtotal</Text>
-            <Text variant="body" style={{ color: c.text, fontWeight: '600' }}>UGX {subtotal.toLocaleString()}</Text>
+            <Text variant="body" style={{ color: c.text, fontWeight: '600' }}>{formatCurrency(subtotal)}</Text>
           </View>
           <View style={styles.totalRow}>
             <Text variant="body" style={{ color: c.textSecondary }}>Delivery Fee</Text>
             <Text variant="body" style={{ color: deliveryFee === 0 ? '#27AE60' : c.text, fontWeight: '600' }}>
-              {deliveryFee === 0 ? 'Free' : `UGX ${deliveryFee.toLocaleString()}`}
+              {deliveryFee === 0 ? 'Free' : formatCurrency(deliveryFee)}
             </Text>
           </View>
           <View style={[styles.totalRow, styles.totalRowFinal, { borderTopColor: c.borderLight }]}>
             <Text variant="h3" style={{ color: c.text, fontWeight: '800' }}>TOTAL</Text>
-            <Text variant="h3" style={{ color: c.primary, fontWeight: '800' }}>UGX {total.toLocaleString()}</Text>
+            <Text variant="h3" style={{ color: c.primary, fontWeight: '800' }}>{formatCurrency(total)}</Text>
           </View>
         </View>
 
@@ -194,14 +195,13 @@ export default function CheckoutScreen() {
               const isActive = addr.id === pickedId || (!pickedId && addr.isSelected);
               const line = [addr.street || addr.address_line, addr.city].filter(Boolean).join(', ');
               return (
-                <TouchableOpacity
+                <Pressable
                   key={addr.id}
                   style={[
                     styles.addrOption,
                     { borderColor: isActive ? c.primary : c.borderLight, backgroundColor: isActive ? c.primaryLight : c.backgroundSecondary },
                   ]}
                   onPress={() => handlePickAddress(addr)}
-                  activeOpacity={0.8}
                 >
                   <View style={[styles.addrIconWrap, { backgroundColor: isActive ? c.primary : c.backgroundSecondary }]}>
                     <Ionicons
@@ -217,7 +217,7 @@ export default function CheckoutScreen() {
                     ) : null}
                   </View>
                   {isActive && <Ionicons name="checkmark-circle" size={22} color={c.primary} />}
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
 
@@ -243,7 +243,6 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: 18, fontWeight: '700' },

@@ -3,17 +3,14 @@ import { View, StyleSheet, Image, ScrollView, Pressable, Alert, ActivityIndicato
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton } from '../../src/components/ui';
-import { supabase } from '../../src/services/supabase';
-import { useCartStore } from '../../src/store';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { spacing, radius } from '../../src/theme';
+import { Text, Skeleton } from '@/components/ui';
+import { supabase } from '@/services/supabase';
+import { useCartStore } from '@/store';
+import { useTheme } from '@/providers/ThemeProvider';
+import { spacing, radius } from '@/theme';
+import { formatCurrency } from '@/utils/format';
 
-const sizes = [
-  { label: '10"', value: 'sm' },
-  { label: '14"', value: 'md' },
-  { label: '16"', value: 'lg' },
-];
+import { PIZZA_SIZES as sizes } from '@/constants';
 
 export default function FoodDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -105,7 +102,7 @@ export default function FoodDetailScreen() {
     } else {
       Alert.alert(
         '✅ Added to Cart!',
-        `${quantity}x ${item.name} — UGX ${totalPrice.toLocaleString()}`,
+        `${quantity}x ${item.name} — ${formatCurrency(totalPrice)}`,
         [
           { text: 'Continue Shopping', onPress: () => router.back() },
           { text: 'Go to Cart', onPress: () => { router.back(); router.navigate('/(tabs)/cart'); } },
@@ -183,7 +180,7 @@ export default function FoodDetailScreen() {
       {/* Bottom bar */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.base, backgroundColor: c.background, borderTopColor: c.borderLight }]}>
         <View style={styles.bottomTopRow}>
-          <Text variant="h2" style={[styles.totalPrice, { color: c.text }]}>UGX {totalPrice.toLocaleString()}</Text>
+          <Text variant="h2" style={[styles.totalPrice, { color: c.text }]}>{formatCurrency(totalPrice)}</Text>
 
           <View style={styles.quantityRow}>
             <Pressable style={[styles.qtyBtn, { backgroundColor: c.primary }]} onPress={() => setQuantity(Math.max(1, quantity - 1))}>

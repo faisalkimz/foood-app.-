@@ -3,9 +3,9 @@ import { View, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { spacing, radius } from '../../src/theme';
+import { Text } from '@/components/ui';
+import { useTheme } from '@/providers/ThemeProvider';
+import { spacing, radius } from '@/theme';
 
 const faqs = [
   { q: 'How do I place an order?', a: 'Browse restaurants, select your items, add to cart, and proceed to checkout. You can pay with card, cash, or mobile money.' },

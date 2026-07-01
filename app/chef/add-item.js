@@ -4,12 +4,14 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Text, showToast } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { spacing, radius } from '../../src/theme';
-import { fetchMyRestaurant, addMenuItem } from '../../src/services/restaurantService';
+import { Text, showToast } from '@/components/ui';
+import { CURRENCY_SYMBOL } from '@/utils/format';
+import { useTheme } from '@/providers/ThemeProvider';
+import { spacing, radius } from '@/theme';
+import { fetchMyRestaurant, addMenuItem } from '@/services/restaurantService';
+import { uploadImage } from '@/services/uploadService';
 
-const CATEGORIES = ['Pizza', 'Burger', 'Salad', 'Chicken', 'Seafood', 'Sides', 'Dessert', 'Drinks'];
+const CATEGORIES = ['Main', 'Pizza', 'Burger', 'Salad', 'Chicken', 'Seafood', 'Sides', 'Dessert', 'Drinks'];
 
 export default function AddItemScreen() {
   const router = useRouter();
@@ -88,10 +90,15 @@ export default function AddItemScreen() {
         return;
       }
 
-      // Determine final image URL
+      // Determine final image URL - upload local images to Supabase Storage
       let finalImage = imageUrl.trim();
       if (imageLocal) {
-        finalImage = imageLocal; // Use local URI as-is (works for display)
+        try {
+          finalImage = await uploadImage(imageLocal, 'menu-items');
+        } catch {
+          showToast({ type: 'warning', message: 'Image upload failed, using local URI.' });
+          finalImage = imageLocal;
+        }
       }
 
       await addMenuItem(restaurant.id, {
@@ -185,7 +192,7 @@ export default function AddItemScreen() {
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>PRICE (UGX)</Text>
+            <Text variant="label" style={[styles.fieldLabel, { color: c.textMuted }]}>PRICE ({CURRENCY_SYMBOL})</Text>
             <TextInput
               style={[styles.input, { backgroundColor: c.backgroundSecondary, borderColor: c.border, color: c.text }]}
               placeholder="0.00"

@@ -2,11 +2,13 @@ import { View, StyleSheet, FlatList, Image, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Header } from '../../src/components/shared';
-import { Text, Button } from '../../src/components/ui';
-import { useCartStore } from '../../src/store';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { spacing, radius } from '../../src/theme';
+import { Header } from '@/components/shared';
+import { Text, Button } from '@/components/ui';
+import { useCartStore } from '@/store';
+import { useTheme } from '@/providers/ThemeProvider';
+import { spacing, radius } from '@/theme';
+import { DEFAULT_DELIVERY_FEE } from '@/constants';
+import { formatCurrency } from '@/utils/format';
 
 export default function CartScreen() {
   const router = useRouter();
@@ -31,7 +33,7 @@ export default function CartScreen() {
   }
 
   const total = getSubtotal();
-  const deliveryFee = 0;
+  const deliveryFee = DEFAULT_DELIVERY_FEE;
   const grandTotal = total + deliveryFee;
 
   return (
@@ -49,7 +51,7 @@ export default function CartScreen() {
                 {item.name}
               </Text>
               <Text variant="bodySmall" style={[styles.itemPrice, { color: c.primary }]}>
-                UGX {item.price}
+                {formatCurrency(item.price)}
               </Text>
               <View style={styles.qtyRow}>
                 <Pressable
@@ -81,18 +83,18 @@ export default function CartScreen() {
           <View style={[styles.summary, { borderTopColor: c.border }]}>
             <View style={styles.summaryRow}>
               <Text variant="body">Subtotal</Text>
-              <Text variant="body" style={styles.summaryValue}>UGX {total.toFixed(2)}</Text>
+              <Text variant="body" style={styles.summaryValue}>{formatCurrency(total)}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text variant="body">Delivery Fee</Text>
               <Text variant="body" style={[styles.summaryValue, { color: c.success }]}>
-                {deliveryFee === 0 ? 'Free' : `UGX ${deliveryFee.toFixed(2)}`}
+                {deliveryFee === 0 ? 'Free' : formatCurrency(deliveryFee)}
               </Text>
             </View>
             <View style={[styles.divider, { backgroundColor: c.border }]} />
             <View style={styles.summaryRow}>
               <Text variant="h3">Total</Text>
-              <Text variant="h3" style={{ color: c.primary }}>UGX {grandTotal.toFixed(2)}</Text>
+              <Text variant="h3" style={{ color: c.primary }}>{formatCurrency(grandTotal)}</Text>
             </View>
           </View>
         }

@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../src/providers/ThemeProvider';
+import { useTheme } from '@/providers/ThemeProvider';
 
 export default function ChefTabsLayout() {
   const c = useTheme();

@@ -1,16 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  View, FlatList, StyleSheet, Image, Pressable,
+  View, StyleSheet, Image, Pressable,
   ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Skeleton } from '../../src/components/ui';
-import { fetchRestaurant, fetchMenuItems } from '../../src/services/restaurantService';
-import { useCartStore } from '../../src/store';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { spacing, radius } from '../../src/theme';
+import { Text, Skeleton, showToast } from '@/components/ui';
+import { fetchRestaurant, fetchMenuItems } from '@/services/restaurantService';
+import { useCartStore } from '@/store';
+import { useTheme } from '@/providers/ThemeProvider';
+import { supabase } from '@/services/supabase';
+import { spacing, radius } from '@/theme';
+import { formatCurrency } from '@/utils/format';
 
 export default function RestaurantScreen() {
   const { id } = useLocalSearchParams();
@@ -24,6 +26,42 @@ export default function RestaurantScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [error, setError] = useState(null);
+  const [isFavourite, setIsFavourite] = useState(false);
+
+  const checkFavourite = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('favourites')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('restaurant_id', id)
+        .maybeSingle();
+      setIsFavourite(!!data);
+    } catch { /* silent */ }
+  }, [id]);
+
+  const toggleFavourite = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/(auth)/login');
+        return;
+      }
+      if (isFavourite) {
+        await supabase.from('favourites').delete().eq('user_id', user.id).eq('restaurant_id', id);
+        setIsFavourite(false);
+        showToast({ type: 'success', message: 'Removed from favourites' });
+      } else {
+        await supabase.from('favourites').insert({ user_id: user.id, restaurant_id: id });
+        setIsFavourite(true);
+        showToast({ type: 'success', message: 'Added to favourites' });
+      }
+    } catch {
+      showToast({ type: 'error', message: 'Failed to update favourite' });
+    }
+  }, [id, isFavourite, router]);
 
   useEffect(() => {
     (async () => {
@@ -34,13 +72,14 @@ export default function RestaurantScreen() {
         ]);
         setRestaurant(rest);
         setMenuItems(menu);
+        checkFavourite();
       } catch (err) {
         setError(err.message);
       } finally {
         setIsLoading(false);
       }
     })();
-  }, [id]);
+  }, [id, checkFavourite]);
 
   if (isLoading) {
     return (
@@ -88,13 +127,13 @@ export default function RestaurantScreen() {
           </Pressable>
           <Pressable
             style={styles.iconBtn}
-            onPress={() => Alert.alert('Options', '', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Add to Favourites', onPress: () => Alert.alert('❤️ Saved', 'Added to favourites!') },
-              { text: 'Share', onPress: () => Alert.alert('📤 Shared', 'Link copied!') },
-            ])}
+            onPress={toggleFavourite}
           >
-            <Ionicons name="ellipsis-horizontal" size={22} color="#1A1A1A" />
+            <Ionicons
+              name={isFavourite ? 'heart' : 'heart-outline'}
+              size={22}
+              color={isFavourite ? '#FF6B35' : '#1A1A1A'}
+            />
           </Pressable>
         </View>
       </View>
@@ -126,7 +165,7 @@ export default function RestaurantScreen() {
             <View style={styles.metaItem}>
               <Ionicons name="bicycle-outline" size={16} color={c.primary} />
               <Text variant="bodySmall" style={[styles.metaValue, { color: c.text }]}>
-                {restaurant.freeDelivery ? 'Free delivery' : `UGX ${restaurant.deliveryFee.toLocaleString()}`}
+                {restaurant.freeDelivery ? 'Free delivery' : formatCurrency(restaurant.deliveryFee)}
               </Text>
             </View>
             <View style={styles.metaItem}>
@@ -208,7 +247,7 @@ export default function RestaurantScreen() {
                       </Text>
                     ) : null}
                     <Text variant="body" style={[styles.menuPrice, { color: c.primary }]}>
-                      UGX {item.price.toLocaleString()}
+                      {formatCurrency(item.price)}
                     </Text>
                   </View>
                   <Pressable

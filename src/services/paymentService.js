@@ -4,7 +4,7 @@
  * The backend keeps FLW_SECRET_KEY safe — never exposed to the mobile app.
  */
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
 
 /**
  * Initiate MTN or Airtel Uganda Mobile Money payment.

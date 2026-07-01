@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { FoodLogo } from '../../src/components/shared';
-import { useTheme } from '../../src/providers/ThemeProvider';
+import { FoodLogo } from '@/components/shared';
+import { useTheme } from '@/providers/ThemeProvider';
 
 /**
  * Single white splash screen with orange sunburst decoration.

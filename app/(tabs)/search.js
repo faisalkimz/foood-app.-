@@ -3,22 +3,13 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useMemo } from 'react';
-import { Header, SearchBar, RestaurantCard } from '../../src/components/shared';
-import { Text, Skeleton } from '../../src/components/ui';
-import { fetchRestaurants } from '../../src/services/restaurantService';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { spacing, radius } from '../../src/theme';
+import { Header, SearchBar, RestaurantCard } from '@/components/shared';
+import { Text, Skeleton } from '@/components/ui';
+import { fetchRestaurants } from '@/services/restaurantService';
+import { useTheme } from '@/providers/ThemeProvider';
+import { spacing, radius } from '@/theme';
 
-const categories = [
-  { id: '1', name: 'All', emoji: '🍽️' },
-  { id: '2', name: 'Burger', emoji: '🍔' },
-  { id: '3', name: 'Pizza', emoji: '🍕' },
-  { id: '4', name: 'Chicken', emoji: '🍗' },
-  { id: '5', name: 'Sushi', emoji: '🍣' },
-  { id: '6', name: 'Salad', emoji: '🥗' },
-  { id: '7', name: 'Dessert', emoji: '🍰' },
-  { id: '8', name: 'Coffee', emoji: '☕' },
-];
+import { CATEGORIES as categories } from '@/constants';
 
 const SORT_OPTIONS = ['Relevance', 'Rating', 'Delivery Time', 'Distance'];
 const PRICE_RANGES = ['$', '$$', '$$$', '$$$$'];

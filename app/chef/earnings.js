@@ -5,11 +5,12 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../../src/components/ui';
-import { useTheme } from '../../src/providers/ThemeProvider';
-import { supabase } from '../../src/services/supabase';
-import { fetchMyRestaurant } from '../../src/services/restaurantService';
-import { spacing, radius } from '../../src/theme';
+import { Text, showToast } from '@/components/ui';
+import { formatCurrency } from '@/utils/format';
+import { useTheme } from '@/providers/ThemeProvider';
+import { supabase } from '@/services/supabase';
+import { fetchMyRestaurant } from '@/services/restaurantService';
+import { spacing, radius } from '@/theme';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -95,7 +96,7 @@ export default function EarningsScreen() {
         }
         setDailyBreakdown(breakdown);
       } catch {
-        // silent
+        showToast({ type: 'error', message: 'Failed to load earnings data.' });
       } finally {
         setIsLoading(false);
       }
@@ -130,17 +131,17 @@ export default function EarningsScreen() {
         <View style={styles.revenueCards}>
           <View style={[styles.revenueCard, { backgroundColor: c.primary }]}>
             <Text variant="caption" style={styles.revLabel}>Today</Text>
-            <Text variant="h1" style={styles.revAmount}>UGX {todayRevenue.toLocaleString()}</Text>
+            <Text variant="h1" style={styles.revAmount}>{formatCurrency(todayRevenue)}</Text>
             <Text variant="caption" style={styles.revSub}>{todayOrders} orders</Text>
           </View>
           <View style={styles.revenueRow}>
             <View style={[styles.revenueCardSmall, { backgroundColor: c.backgroundSecondary }]}>
               <Text variant="caption" style={{ color: c.textMuted }}>This Week</Text>
-              <Text variant="h3" style={{ color: c.text, fontWeight: '800' }}>UGX {weekRevenue.toLocaleString()}</Text>
+              <Text variant="h3" style={{ color: c.text, fontWeight: '800' }}>{formatCurrency(weekRevenue)}</Text>
             </View>
             <View style={[styles.revenueCardSmall, { backgroundColor: c.backgroundSecondary }]}>
               <Text variant="caption" style={{ color: c.textMuted }}>This Month</Text>
-              <Text variant="h3" style={{ color: c.text, fontWeight: '800' }}>UGX {monthRevenue.toLocaleString()}</Text>
+              <Text variant="h3" style={{ color: c.text, fontWeight: '800' }}>{formatCurrency(monthRevenue)}</Text>
             </View>
           </View>
         </View>
@@ -176,7 +177,7 @@ export default function EarningsScreen() {
                 </View>
               </View>
               <Text variant="body" style={[styles.payoutAmount, { color: c.text }]}>
-                UGX {day.amount.toLocaleString()}
+                {formatCurrency(day.amount)}
               </Text>
             </View>
           ))}

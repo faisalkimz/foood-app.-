@@ -4,13 +4,16 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
-import { ThemeProvider, useTheme } from '../src/providers/ThemeProvider';
-import { ToastProvider } from '../src/components/ui';
-import { useThemeStore } from '../src/store';
-import { useAuthStore } from '../src/store/authStore';
-import { useLocationStore } from '../src/store/locationStore';
-import { supabase } from '../src/services/supabase';
-import { getProfile } from '../src/services/authService';
+import { ThemeProvider, useTheme } from '@/providers/ThemeProvider';
+import { ToastProvider } from '@/components/ui';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import NetworkBanner from '@/components/NetworkBanner';
+import { useThemeStore } from '@/store';
+import { useAuthStore } from '@/store/authStore';
+import { useLocationStore } from '@/store/locationStore';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { supabase } from '@/services/supabase';
+import { getProfile } from '@/services/authService';
 
 function AppStack() {
   const c = useTheme();
@@ -19,27 +22,27 @@ function AppStack() {
   const initializeLocation = useLocationStore((s) => s.initialize);
   const clearLocation = useLocationStore((s) => s.clearLocation);
 
+  // Initialize push notifications globally
+  const { user } = useAuthStore();
+  usePushNotifications(user);
+
   useEffect(() => {
-    // 1. Restore auth session from Supabase on app start
     initialize();
 
-    // 2. Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+        if (event === 'INITIAL_SESSION') return;
+
+        if (event === 'SIGNED_IN' && session?.user) {
           try {
             const profile = await getProfile(session.user.id);
             login({ ...session.user, ...profile }, profile.role || 'customer');
-            // Fetch this user's addresses from Supabase now that we're authenticated
-            initializeLocation();
           } catch {
-            // Profile might not exist yet (new signup), let verification handle it
-            // But still try loading addresses in case they exist
-            initializeLocation();
+            login(session.user, 'customer');
           }
+          initializeLocation();
         } else if (event === 'SIGNED_OUT') {
           logout();
-          // Clear local address cache so next user starts fresh
           clearLocation();
         }
       }
@@ -60,6 +63,7 @@ function AppStack() {
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
+      <NetworkBanner />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -107,7 +111,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <ToastProvider>
-            <AppStack />
+            <ErrorBoundary>
+              <AppStack />
+            </ErrorBoundary>
           </ToastProvider>
         </ThemeProvider>
       </SafeAreaProvider>
