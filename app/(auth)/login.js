@@ -7,12 +7,14 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Input, showToast } from '../../src/components/ui';
-import { colors, spacing, radius } from '../../src/theme';
+import { spacing, radius } from '../../src/theme';
+import { useTheme } from '../../src/providers/ThemeProvider';
 import { signInWithOTP } from '../../src/services/authService';
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const c = useTheme();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -36,20 +38,20 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: c.splashDark }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Dark header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing['2xl'] }]}>
-        <Text variant="h1" style={styles.heading}>Log In</Text>
+        <Text variant="h1" style={[styles.heading, { color: c.textInverse }]}>Log In</Text>
         <Text variant="bodySmall" style={styles.subtitle}>
           Enter your email and we'll send you a verification code
         </Text>
       </View>
 
-      {/* White content */}
+      {/* Content */}
       <ScrollView
-        style={styles.content}
+        style={[styles.content, { backgroundColor: c.background }]}
         contentContainerStyle={styles.contentInner}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -57,7 +59,7 @@ export default function LoginScreen() {
         {/* Form */}
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text variant="label" style={styles.inputLabel}>EMAIL</Text>
+            <Text variant="label" style={[styles.inputLabel, { color: c.text }]}>EMAIL</Text>
             <Input
               placeholder="example@gmail.com"
               value={email}
@@ -69,11 +71,11 @@ export default function LoginScreen() {
           </View>
 
           <Pressable
-            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+            style={[styles.loginButton, { backgroundColor: c.primary }, loading && styles.loginButtonDisabled]}
             onPress={handleLogin}
             disabled={loading}
           >
-            <Text variant="body" style={styles.loginButtonText}>
+            <Text variant="body" style={[styles.loginButtonText, { color: c.textInverse }]}>
               {loading ? 'SENDING CODE...' : 'SEND CODE →'}
             </Text>
           </Pressable>
@@ -82,17 +84,17 @@ export default function LoginScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <View style={styles.signUpRow}>
-            <Text variant="bodySmall" style={styles.signUpLabel}>
+            <Text variant="bodySmall" style={[styles.signUpLabel, { color: c.textSecondary }]}>
               Don't have an account?{' '}
             </Text>
             <Pressable onPress={() => router.push('/(auth)/signup')} hitSlop={8}>
-              <Text variant="bodySmall" style={styles.signUpLink}>SIGN UP</Text>
+              <Text variant="bodySmall" style={[styles.signUpLink, { color: c.primary }]}>SIGN UP</Text>
             </Pressable>
           </View>
 
-          <View style={styles.infoBox}>
-            <Ionicons name="mail-outline" size={16} color={colors.primary} />
-            <Text variant="bodySmall" style={styles.infoText}>
+          <View style={[styles.infoBox, { backgroundColor: c.primaryLight }]}>
+            <Ionicons name="mail-outline" size={16} color={c.primary} />
+            <Text variant="bodySmall" style={[styles.infoText, { color: c.textSecondary }]}>
               We'll email you a 6-digit code to verify your identity — no password needed.
             </Text>
           </View>
@@ -103,13 +105,12 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.splashDark },
+  container: { flex: 1 },
   header: {
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing['2xl'],
   },
   heading: {
-    color: colors.textInverse,
     fontSize: 30,
     fontWeight: '700',
     marginBottom: spacing.sm,
@@ -117,7 +118,6 @@ const styles = StyleSheet.create({
   subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 15 },
   content: {
     flex: 1,
-    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -131,12 +131,10 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.text,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   loginButton: {
-    backgroundColor: colors.primary,
     paddingVertical: spacing.base,
     borderRadius: radius.md,
     alignItems: 'center',
@@ -145,26 +143,23 @@ const styles = StyleSheet.create({
   },
   loginButtonDisabled: { opacity: 0.6 },
   loginButtonText: {
-    color: colors.textInverse,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   footer: { alignItems: 'center', gap: spacing.lg },
   signUpRow: { flexDirection: 'row', alignItems: 'center' },
-  signUpLabel: { color: colors.textSecondary },
-  signUpLink: { color: colors.primary, fontWeight: '700' },
+  signUpLabel: {},
+  signUpLink: { fontWeight: '700' },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.xs,
-    backgroundColor: colors.primaryLight || 'rgba(255,107,53,0.08)',
     borderRadius: radius.md,
     padding: spacing.md,
   },
   infoText: {
     flex: 1,
-    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },

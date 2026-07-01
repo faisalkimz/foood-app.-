@@ -8,7 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../src/components/ui';
 import { showToast } from '../../src/components/ui';
-import { colors, spacing, radius } from '../../src/theme';
+import { spacing, radius } from '../../src/theme';
+import { useTheme } from '../../src/providers/ThemeProvider';
 import { verifyOTP, signInWithOTP, signUpWithOTP, getProfile, updateProfile } from '../../src/services/authService';
 import { useAuthStore } from '../../src/store/authStore';
 
@@ -17,6 +18,7 @@ const CODE_LENGTH = 6;
 export default function VerificationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const c = useTheme();
   const { email, name, phone, mode } = useLocalSearchParams(); // mode: 'login' | 'signup' | 'forgot'
 
   const [code, setCode] = useState(Array(CODE_LENGTH).fill(''));
@@ -137,23 +139,23 @@ export default function VerificationScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: c.splashDark }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Dark header */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing['2xl'] }]}>
+      <View style={[styles.header, { backgroundColor: c.splashDark, paddingTop: insets.top + spacing['2xl'] }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={colors.textInverse} />
+          <Ionicons name="arrow-back" size={24} color={c.textInverse} />
         </Pressable>
-        <Text variant="h1" style={styles.heading}>Verification</Text>
+        <Text variant="h1" style={[styles.heading, { color: c.textInverse }]}>Verification</Text>
         <Text variant="bodySmall" style={styles.subtitle}>
           We sent a verification code to
         </Text>
-        <Text variant="body" style={styles.email}>{email}</Text>
+        <Text variant="body" style={[styles.email, { color: c.textInverse }]}>{email}</Text>
       </View>
 
-      {/* White content */}
-      <View style={styles.content}>
+      {/* Content */}
+      <View style={[styles.content, { backgroundColor: c.background }]}>
         {/* OTP Input boxes */}
         <View style={styles.codeRow}>
           {code.map((digit, index) => (
@@ -162,8 +164,13 @@ export default function VerificationScreen() {
               ref={(ref) => (inputRefs.current[index] = ref)}
               style={[
                 styles.codeInput,
-                focusedIndex === index && styles.codeInputFocused,
-                digit && styles.codeInputFilled,
+                {
+                  backgroundColor: c.backgroundSecondary,
+                  borderColor: c.border,
+                  color: c.text,
+                },
+                focusedIndex === index && { borderColor: c.primary, backgroundColor: c.primaryLight },
+                digit && { borderColor: c.primary, backgroundColor: c.background },
               ]}
               value={digit}
               onChangeText={(text) => handleCodeChange(text, index)}
@@ -172,7 +179,7 @@ export default function VerificationScreen() {
               keyboardType="number-pad"
               maxLength={1}
               selectTextOnFocus
-              selectionColor={colors.primary}
+              selectionColor={c.primary}
               editable={!loading}
             />
           ))}
@@ -180,33 +187,33 @@ export default function VerificationScreen() {
 
         {/* Verify button */}
         <Pressable
-          style={[styles.verifyButton, (!isComplete || loading) && styles.verifyButtonDisabled]}
+          style={[styles.verifyButton, { backgroundColor: c.primary }, (!isComplete || loading) && styles.verifyButtonDisabled]}
           onPress={handleVerify}
           disabled={!isComplete || loading}
         >
           {loading ? (
-            <ActivityIndicator color={colors.textInverse} />
+            <ActivityIndicator color={c.textInverse} />
           ) : (
-            <Text variant="body" style={styles.verifyText}>VERIFY →</Text>
+            <Text variant="body" style={[styles.verifyText, { color: c.textInverse }]}>VERIFY →</Text>
           )}
         </Pressable>
 
         {/* Resend */}
         <View style={styles.resendRow}>
-          <Text variant="bodySmall" style={styles.resendLabel}>
+          <Text variant="bodySmall" style={[styles.resendLabel, { color: c.textSecondary }]}>
             Didn't receive the code?{' '}
           </Text>
           <Pressable onPress={handleResend} hitSlop={8} disabled={resending}>
-            <Text variant="bodySmall" style={[styles.resendLink, resending && { opacity: 0.5 }]}>
+            <Text variant="bodySmall" style={[styles.resendLink, { color: c.primary }, resending && { opacity: 0.5 }]}>
               {resending ? 'Sending...' : 'Resend'}
             </Text>
           </Pressable>
         </View>
 
         {/* Info note */}
-        <View style={styles.noteBox}>
-          <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-          <Text variant="bodySmall" style={styles.noteText}>
+        <View style={[styles.noteBox, { backgroundColor: c.backgroundSecondary }]}>
+          <Ionicons name="time-outline" size={14} color={c.textSecondary} />
+          <Text variant="bodySmall" style={[styles.noteText, { color: c.textSecondary }]}>
             Check your spam folder if you don't see it. The code expires in 10 minutes.
           </Text>
         </View>
@@ -216,9 +223,8 @@ export default function VerificationScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.splashDark },
+  container: { flex: 1 },
   header: {
-    backgroundColor: colors.splashDark,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing['2xl'],
   },
@@ -230,16 +236,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   heading: {
-    color: colors.textInverse,
     fontSize: 30,
     fontWeight: '700',
     marginBottom: spacing.xs,
   },
   subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
-  email: { color: colors.textInverse, fontWeight: '600', marginTop: 2 },
+  email: { fontWeight: '600', marginTop: 2 },
   content: {
     flex: 1,
-    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: spacing.xl,
@@ -255,24 +259,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 52,
     borderRadius: radius.md,
-    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1.5,
-    borderColor: colors.border,
     textAlign: 'center',
     fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
-  },
-  codeInputFocused: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryLight || 'rgba(255,107,53,0.06)',
-  },
-  codeInputFilled: {
-    borderColor: colors.primary,
-    backgroundColor: colors.background,
   },
   verifyButton: {
-    backgroundColor: colors.primary,
     paddingVertical: spacing.base,
     borderRadius: radius.md,
     alignItems: 'center',
@@ -282,7 +274,6 @@ const styles = StyleSheet.create({
   },
   verifyButtonDisabled: { opacity: 0.5 },
   verifyText: {
-    color: colors.textInverse,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -292,15 +283,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.xl,
   },
-  resendLabel: { color: colors.textSecondary },
-  resendLink: { color: colors.primary, fontWeight: '600' },
+  resendLabel: {},
+  resendLink: { fontWeight: '600' },
   noteBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.xs,
-    backgroundColor: colors.backgroundSecondary,
     borderRadius: radius.md,
     padding: spacing.md,
   },
-  noteText: { flex: 1, color: colors.textSecondary, fontSize: 12, lineHeight: 17 },
+  noteText: { flex: 1, fontSize: 12, lineHeight: 17 },
 });

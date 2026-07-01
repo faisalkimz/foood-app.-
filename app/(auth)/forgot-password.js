@@ -7,12 +7,14 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Input } from '../../src/components/ui';
-import { colors, spacing, radius } from '../../src/theme';
+import { spacing, radius } from '../../src/theme';
+import { useTheme } from '../../src/providers/ThemeProvider';
 import { signInWithOTP } from '../../src/services/authService';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const c = useTheme();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -39,28 +41,28 @@ export default function ForgotPasswordScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: c.splashDark }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Dark header */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.base }]}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.base, backgroundColor: c.splashDark }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={colors.textInverse} />
+          <Ionicons name="arrow-back" size={24} color={c.textInverse} />
         </Pressable>
-        <Text variant="h1" style={styles.heading}>Sign In</Text>
+        <Text variant="h1" style={[styles.heading, { color: c.textInverse }]}>Sign In</Text>
         <Text variant="bodySmall" style={styles.subtitle}>
           Enter your email and we'll send you a sign-in code
         </Text>
       </View>
 
-      {/* White content */}
+      {/* Content */}
       <ScrollView
-        style={styles.content}
+        style={[styles.content, { backgroundColor: c.background }]}
         contentContainerStyle={styles.contentInner}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.inputGroup}>
-          <Text variant="label" style={styles.inputLabel}>EMAIL</Text>
+          <Text variant="label" style={[styles.inputLabel, { color: c.text }]}>EMAIL</Text>
           <Input
             placeholder="example@gmail.com"
             value={email}
@@ -72,18 +74,18 @@ export default function ForgotPasswordScreen() {
         </View>
 
         <Pressable
-          style={[styles.sendButton, (!email || loading) && styles.sendButtonDisabled]}
+          style={[styles.sendButton, { backgroundColor: c.primary }, (!email || loading) && styles.sendButtonDisabled]}
           onPress={handleSend}
           disabled={!email || loading}
         >
-          <Text variant="body" style={styles.sendText}>
+          <Text variant="body" style={[styles.sendText, { color: c.textInverse }]}>
             {loading ? 'SENDING...' : 'SEND CODE →'}
           </Text>
         </Pressable>
 
-        <View style={styles.infoBox}>
-          <Ionicons name="mail-outline" size={16} color={colors.primary} />
-          <Text variant="bodySmall" style={styles.infoText}>
+        <View style={[styles.infoBox, { backgroundColor: c.primaryLight }]}>
+          <Ionicons name="mail-outline" size={16} color={c.primary} />
+          <Text variant="bodySmall" style={[styles.infoText, { color: c.textSecondary }]}>
             We'll send a 6-digit verification code to your email. Use it to sign in.
           </Text>
         </View>
@@ -93,9 +95,8 @@ export default function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.splashDark },
+  container: { flex: 1 },
   header: {
-    backgroundColor: colors.splashDark,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing['2xl'],
   },
@@ -107,7 +108,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   heading: {
-    color: colors.textInverse,
     fontSize: 30,
     fontWeight: '700',
     marginBottom: spacing.sm,
@@ -115,7 +115,6 @@ const styles = StyleSheet.create({
   subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
   content: {
     flex: 1,
-    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -124,19 +123,16 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.text,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   sendButton: {
-    backgroundColor: colors.primary,
     paddingVertical: spacing.base,
     borderRadius: radius.md,
     alignItems: 'center',
   },
   sendButtonDisabled: { opacity: 0.5 },
   sendText: {
-    color: colors.textInverse,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -145,9 +141,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.xs,
-    backgroundColor: colors.primaryLight || 'rgba(255,107,53,0.08)',
     borderRadius: radius.md,
     padding: spacing.md,
   },
-  infoText: { flex: 1, color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
+  infoText: { flex: 1, fontSize: 13, lineHeight: 18 },
 });

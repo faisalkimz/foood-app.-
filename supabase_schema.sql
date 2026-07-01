@@ -110,9 +110,9 @@ CREATE TABLE public.favorites (
 );
 
 -- ==========================================
--- 7. ADDRESSES TABLE
+-- 7. USER_ADDRESSES TABLE
 -- ==========================================
-CREATE TABLE public.addresses (
+CREATE TABLE public.user_addresses (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     customer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     label TEXT NOT NULL,
@@ -131,7 +131,7 @@ ALTER TABLE public.menu_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.addresses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_addresses ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: Users can read everyone, but only update themselves
 CREATE POLICY "Profiles are viewable by everyone." ON public.profiles FOR SELECT USING (true);
@@ -176,8 +176,8 @@ CREATE POLICY "Chefs view own restaurant order items." ON public.order_items FOR
 -- Favorites
 CREATE POLICY "Users manage own favorites." ON public.favorites FOR ALL USING (auth.uid() = customer_id);
 
--- Addresses
-CREATE POLICY "Users manage own addresses." ON public.addresses FOR ALL USING (auth.uid() = customer_id);
+-- User Addresses
+CREATE POLICY "Users manage own addresses." ON public.user_addresses FOR ALL USING (auth.uid() = customer_id);
 
 -- ==========================================
 -- INDEXES
@@ -189,6 +189,6 @@ CREATE INDEX idx_orders_restaurant ON public.orders(restaurant_id);
 CREATE INDEX idx_orders_status ON public.orders(status);
 CREATE INDEX idx_order_items_order ON public.order_items(order_id);
 CREATE INDEX idx_favorites_customer ON public.favorites(customer_id);
-CREATE UNIQUE INDEX idx_addresses_single_default ON public.addresses(customer_id) WHERE is_default = true;
+CREATE UNIQUE INDEX idx_addresses_single_default ON public.user_addresses(customer_id) WHERE is_default = true;
 CREATE UNIQUE INDEX idx_favorites_restaurant ON public.favorites(customer_id, restaurant_id) WHERE restaurant_id IS NOT NULL;
 CREATE UNIQUE INDEX idx_favorites_menu_item ON public.favorites(customer_id, menu_item_id) WHERE menu_item_id IS NOT NULL;

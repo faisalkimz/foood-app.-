@@ -3,7 +3,7 @@ import { View, StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { FoodLogo } from '../../src/components/shared';
-import { colors } from '../../src/theme';
+import { useTheme } from '../../src/providers/ThemeProvider';
 
 /**
  * Single white splash screen with orange sunburst decoration.
@@ -11,6 +11,7 @@ import { colors } from '../../src/theme';
  */
 export default function SplashScreen() {
   const router = useRouter();
+  const c = useTheme();
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const sunburstScale = useRef(new Animated.Value(0.3)).current;
@@ -45,8 +46,8 @@ export default function SplashScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <View style={[styles.container, { backgroundColor: c.background }]}>
+      <StatusBar style={c.background === '#FFFFFF' ? 'dark' : 'light'} />
 
       {/* Orange sunburst arcs — bottom-right corner */}
       <Animated.View
@@ -64,6 +65,7 @@ export default function SplashScreen() {
             style={[
               styles.arc,
               {
+                backgroundColor: c.primary,
                 width: (i + 1) * 75,
                 height: (i + 1) * 75,
                 borderRadius: ((i + 1) * 75) / 2,
@@ -76,10 +78,10 @@ export default function SplashScreen() {
 
       {/* Small decorative dots */}
       <Animated.View style={[styles.decor, { opacity: sunburstOpacity }]}>
-        <View style={[styles.dot, { width: 10, height: 10, top: '14%', right: '18%', opacity: 0.3 }]} />
-        <View style={[styles.dot, { width: 6, height: 6, top: '24%', left: '14%', opacity: 0.2 }]} />
-        <View style={[styles.dot, { width: 12, height: 12, top: '48%', right: '10%', opacity: 0.15 }]} />
-        <View style={[styles.dot, { width: 8, height: 8, bottom: '42%', left: '20%', opacity: 0.2 }]} />
+        <View style={[styles.dot, { backgroundColor: c.primary, width: 10, height: 10, top: '14%', right: '18%', opacity: 0.3 }]} />
+        <View style={[styles.dot, { backgroundColor: c.primary, width: 6, height: 6, top: '24%', left: '14%', opacity: 0.2 }]} />
+        <View style={[styles.dot, { backgroundColor: c.primary, width: 12, height: 12, top: '48%', right: '10%', opacity: 0.15 }]} />
+        <View style={[styles.dot, { backgroundColor: c.primary, width: 8, height: 8, bottom: '42%', left: '20%', opacity: 0.2 }]} />
       </Animated.View>
 
       {/* Food logo — centered */}
@@ -93,7 +95,6 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -110,7 +111,6 @@ const styles = StyleSheet.create({
   },
   arc: {
     position: 'absolute',
-    backgroundColor: colors.primary,
   },
   decor: {
     ...StyleSheet.absoluteFillObject,
@@ -118,6 +118,5 @@ const styles = StyleSheet.create({
   dot: {
     position: 'absolute',
     borderRadius: 50,
-    backgroundColor: colors.primary,
   },
 });

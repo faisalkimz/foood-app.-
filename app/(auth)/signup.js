@@ -7,12 +7,14 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Input, showToast } from '../../src/components/ui';
-import { colors, spacing, radius } from '../../src/theme';
+import { spacing, radius } from '../../src/theme';
+import { useTheme } from '../../src/providers/ThemeProvider';
 import { signUpWithOTP } from '../../src/services/authService';
 
 export default function SignupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const c = useTheme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -54,30 +56,30 @@ export default function SignupScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: c.splashDark }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Dark header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.xl }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={colors.textInverse} />
+          <Ionicons name="arrow-back" size={24} color={c.textInverse} />
         </Pressable>
-        <Text variant="h1" style={styles.heading}>Sign Up</Text>
+        <Text variant="h1" style={[styles.heading, { color: c.textInverse }]}>Sign Up</Text>
         <Text variant="bodySmall" style={styles.subtitle}>
           Create your account — we'll send a code to verify your email
         </Text>
       </View>
 
-      {/* White content */}
+      {/* Content */}
       <ScrollView
-        style={styles.content}
+        style={[styles.content, { backgroundColor: c.background }]}
         contentContainerStyle={styles.contentInner}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text variant="label" style={styles.inputLabel}>FULL NAME</Text>
+            <Text variant="label" style={[styles.inputLabel, { color: c.text }]}>FULL NAME</Text>
             <Input
               placeholder="John Doe"
               value={name}
@@ -87,7 +89,7 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text variant="label" style={styles.inputLabel}>EMAIL</Text>
+            <Text variant="label" style={[styles.inputLabel, { color: c.text }]}>EMAIL</Text>
             <Input
               placeholder="example@gmail.com"
               value={email}
@@ -99,7 +101,7 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text variant="label" style={styles.inputLabel}>PHONE NUMBER</Text>
+            <Text variant="label" style={[styles.inputLabel, { color: c.text }]}>PHONE NUMBER</Text>
             <Input
               placeholder="+256 700 123 456"
               value={phone}
@@ -110,11 +112,11 @@ export default function SignupScreen() {
           </View>
 
           <Pressable
-            style={[styles.signupButton, loading && styles.buttonDisabled]}
+            style={[styles.signupButton, { backgroundColor: c.primary }, loading && styles.buttonDisabled]}
             onPress={handleSignup}
             disabled={loading}
           >
-            <Text variant="body" style={styles.signupButtonText}>
+            <Text variant="body" style={[styles.signupButtonText, { color: c.textInverse }]}>
               {loading ? 'SENDING CODE...' : 'CREATE ACCOUNT →'}
             </Text>
           </Pressable>
@@ -122,17 +124,17 @@ export default function SignupScreen() {
 
         <View style={styles.footer}>
           <View style={styles.loginRow}>
-            <Text variant="bodySmall" style={styles.loginLabel}>
+            <Text variant="bodySmall" style={[styles.loginLabel, { color: c.textSecondary }]}>
               Already have an account?{' '}
             </Text>
             <Pressable onPress={() => router.back()} hitSlop={8}>
-              <Text variant="bodySmall" style={styles.loginLink}>Sign In</Text>
+              <Text variant="bodySmall" style={[styles.loginLink, { color: c.primary }]}>Sign In</Text>
             </Pressable>
           </View>
 
-          <View style={styles.infoBox}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={colors.primary} />
-            <Text variant="bodySmall" style={styles.infoText}>
+          <View style={[styles.infoBox, { backgroundColor: c.primaryLight }]}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={c.primary} />
+            <Text variant="bodySmall" style={[styles.infoText, { color: c.textSecondary }]}>
               No password required. We verify your identity with a one-time code sent to your email.
             </Text>
           </View>
@@ -143,7 +145,7 @@ export default function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.splashDark },
+  container: { flex: 1 },
   header: { paddingHorizontal: spacing.xl, paddingBottom: spacing['2xl'] },
   backBtn: {
     width: 40,
@@ -153,7 +155,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   heading: {
-    color: colors.textInverse,
     fontSize: 30,
     fontWeight: '700',
     marginBottom: spacing.sm,
@@ -161,7 +162,6 @@ const styles = StyleSheet.create({
   subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 15 },
   content: {
     flex: 1,
-    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
   },
@@ -175,12 +175,10 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.text,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   signupButton: {
-    backgroundColor: colors.primary,
     paddingVertical: spacing.base,
     borderRadius: radius.md,
     alignItems: 'center',
@@ -188,22 +186,20 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   signupButtonText: {
-    color: colors.textInverse,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   footer: { alignItems: 'center', gap: spacing.lg },
   loginRow: { flexDirection: 'row', alignItems: 'center' },
-  loginLabel: { color: colors.textSecondary },
-  loginLink: { color: colors.primary, fontWeight: '700' },
+  loginLabel: {},
+  loginLink: { fontWeight: '700' },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.xs,
-    backgroundColor: colors.primaryLight || 'rgba(255,107,53,0.08)',
     borderRadius: radius.md,
     padding: spacing.md,
   },
-  infoText: { flex: 1, color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
+  infoText: { flex: 1, fontSize: 13, lineHeight: 18 },
 });

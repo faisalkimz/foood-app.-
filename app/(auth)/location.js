@@ -5,12 +5,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Text } from '../../src/components/ui';
-import { colors, spacing, radius } from '../../src/theme';
+import { spacing, radius } from '../../src/theme';
+import { useTheme } from '../../src/providers/ThemeProvider';
 import { useLocationStore } from '../../src/store/locationStore';
 
 export default function LocationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const c = useTheme();
   const setLocation = useLocationStore((s) => s.setLocation);
   const [detecting, setDetecting] = useState(false);
 
@@ -80,7 +82,7 @@ export default function LocationScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.xl }]}>
+    <View style={[styles.container, { backgroundColor: c.background, paddingTop: insets.top, paddingBottom: insets.bottom + spacing.xl }]}>
       {/* Map illustration */}
       <View style={styles.illustrationWrap}>
         <Image
@@ -92,36 +94,36 @@ export default function LocationScreen() {
 
       {/* Bottom content */}
       <View style={styles.bottomContent}>
-        <Text variant="h2" style={styles.title}>Find Restaurants Near You</Text>
-        <Text variant="bodySmall" style={styles.subtitle}>
+        <Text variant="h2" style={[styles.title, { color: c.text }]}>Find Restaurants Near You</Text>
+        <Text variant="bodySmall" style={[styles.subtitle, { color: c.textSecondary }]}>
           Allow location access so we can show you the best food options in your area.
         </Text>
 
         <Pressable
-          style={[styles.locationBtn, detecting && styles.locationBtnDisabled]}
+          style={[styles.locationBtn, { backgroundColor: c.primary }, detecting && styles.locationBtnDisabled]}
           onPress={handleAccessLocation}
           disabled={detecting}
         >
           {detecting ? (
             <>
-              <ActivityIndicator color={colors.textInverse} size="small" />
-              <Text variant="body" style={styles.locationBtnText}>DETECTING LOCATION...</Text>
+              <ActivityIndicator color={c.textInverse} size="small" />
+              <Text variant="body" style={[styles.locationBtnText, { color: c.textInverse }]}>DETECTING LOCATION...</Text>
             </>
           ) : (
             <>
-              <Text variant="body" style={styles.locationBtnText}>ACCESS LOCATION</Text>
-              <View style={styles.locationIcon}>
-                <Ionicons name="navigate" size={18} color={colors.primary} />
+              <Text variant="body" style={[styles.locationBtnText, { color: c.textInverse }]}>ACCESS LOCATION</Text>
+              <View style={[styles.locationIcon, { backgroundColor: c.textInverse }]}>
+                <Ionicons name="navigate" size={18} color={c.primary} />
               </View>
             </>
           )}
         </Pressable>
 
         <Pressable onPress={handleSkip} hitSlop={12}>
-          <Text variant="bodySmall" style={styles.skipText}>Skip for now</Text>
+          <Text variant="bodySmall" style={[styles.skipText, { color: c.primary }]}>Skip for now</Text>
         </Pressable>
 
-        <Text variant="caption" style={styles.disclaimer}>
+        <Text variant="caption" style={[styles.disclaimer, { color: c.textMuted }]}>
           FOODORDER WILL ACCESS YOUR LOCATION{'\n'}ONLY WHILE USING THE APP
         </Text>
       </View>
@@ -132,7 +134,6 @@ export default function LocationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
     justifyContent: 'space-between',
   },
   illustrationWrap: {
@@ -153,12 +154,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: colors.text,
     textAlign: 'center',
   },
   subtitle: {
     textAlign: 'center',
-    color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: spacing.sm,
   },
@@ -166,7 +165,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
     paddingVertical: spacing.base,
     paddingHorizontal: spacing['2xl'],
     borderRadius: radius.full,
@@ -175,7 +173,6 @@ const styles = StyleSheet.create({
   },
   locationBtnDisabled: { opacity: 0.7 },
   locationBtnText: {
-    color: colors.textInverse,
     fontWeight: '700',
     fontSize: 15,
     letterSpacing: 0.5,
@@ -184,18 +181,15 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: colors.textInverse,
     alignItems: 'center',
     justifyContent: 'center',
   },
   skipText: {
-    color: colors.primary,
     fontWeight: '600',
     fontSize: 14,
   },
   disclaimer: {
     textAlign: 'center',
-    color: colors.textMuted,
     fontSize: 11,
     lineHeight: 16,
     letterSpacing: 0.3,

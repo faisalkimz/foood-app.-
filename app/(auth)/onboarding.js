@@ -12,7 +12,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, Button } from '../../src/components/ui';
 import { useAuthStore } from '../../src/store';
-import { colors, spacing, radius } from '../../src/theme';
+import { spacing, radius } from '../../src/theme';
+import { useTheme } from '../../src/providers/ThemeProvider';
 
 const { width, height } = Dimensions.get('window');
 
@@ -44,6 +45,7 @@ const slides = [
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const c = useTheme();
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -86,22 +88,22 @@ export default function OnboardingScreen() {
 
       {/* Text content */}
       <View style={styles.textContent}>
-        <Text variant="h1" style={styles.title}>
+        <Text variant="h1" style={[styles.title, { color: c.text }]}>
           {item.title}
         </Text>
-        <Text variant="body" style={styles.description}>
+        <Text variant="body" style={[styles.description, { color: c.textSecondary }]}>
           {item.description}
         </Text>
       </View>
     </View>
-  ), []);
+  ), [c]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { backgroundColor: c.background, paddingTop: insets.top }]}>
       {/* Skip button */}
       {!isLastSlide && (
         <Pressable onPress={handleSkip} style={styles.skipButton} hitSlop={12}>
-          <Text variant="body" style={styles.skipText}>
+          <Text variant="body" style={[styles.skipText, { color: c.textSecondary }]}>
             Skip
           </Text>
         </Pressable>
@@ -160,7 +162,7 @@ export default function OnboardingScreen() {
                   {
                     width: dotWidth,
                     opacity: dotOpacity,
-                    backgroundColor: colors.primary,
+                    backgroundColor: c.primary,
                   },
                 ]}
               />
@@ -170,11 +172,11 @@ export default function OnboardingScreen() {
 
         {/* CTA Button */}
         <Pressable
-          style={styles.ctaButton}
+          style={[styles.ctaButton, { backgroundColor: c.primary }]}
           onPress={handleNext}
-          android_ripple={{ color: colors.primaryDark }}
+          android_ripple={{ color: c.primaryDark }}
         >
-          <Text variant="body" style={styles.ctaText}>
+          <Text variant="body" style={[styles.ctaText, { color: c.textInverse }]}>
             {isLastSlide ? 'GET STARTED' : 'NEXT'}
           </Text>
         </Pressable>
@@ -188,7 +190,6 @@ const SLIDE_IMAGE_HEIGHT = height * 0.42;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   skipButton: {
     position: 'absolute',
@@ -199,7 +200,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   skipText: {
-    color: colors.textSecondary,
     fontWeight: '500',
     fontSize: 15,
   },
@@ -231,13 +231,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 26,
     fontWeight: '700',
-    color: colors.text,
     marginBottom: spacing.md,
     letterSpacing: -0.3,
   },
   description: {
     textAlign: 'center',
-    color: colors.textSecondary,
     fontSize: 15,
     lineHeight: 22,
     paddingHorizontal: spacing.base,
@@ -257,14 +255,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   ctaButton: {
-    backgroundColor: colors.primary,
     paddingVertical: spacing.base,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   ctaText: {
-    color: colors.textInverse,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
