@@ -24,7 +24,23 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Foodorder to use your location to find nearby restaurants and deliver to your address.",
+          "locationWhenInUsePermission": "Allow Foodorder to use your location to find nearby restaurants and deliver to your address.",
+          "locationAlwaysPermission": "Allow Foodorder to use your location in the background for delivery tracking."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Foodorder to access your photos so you can upload a profile picture or add food item images.",
+          "cameraPermission": "Allow Foodorder to use your camera to take photos for your profile or food items."
+        }
+      ],
+      "expo-blur"
     ]
   }
 }
