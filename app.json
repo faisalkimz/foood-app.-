@@ -39,8 +39,7 @@
           "photosPermission": "Allow Foodorder to access your photos so you can upload a profile picture or add food item images.",
           "cameraPermission": "Allow Foodorder to use your camera to take photos for your profile or food items."
         }
-      ],
-      "expo-blur"
+      ]
     ]
   }
 }
