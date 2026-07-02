@@ -13,6 +13,7 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { supabase } from '@/services/supabase';
 import { updateOrderStatus } from '@/services/restaurantService';
 import { spacing, radius } from '@/theme';
+import Constants from 'expo-constants';
 
 const STEPS = [
   { key: 'pending', label: 'Order Received', icon: 'receipt' },
@@ -161,6 +162,8 @@ export default function ChefOrderDetailScreen() {
     }
   }, [showChat, messages.length]);
 
+  const API_URL = Constants.expoConfig?.extra?.apiUrl || process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+
   const handleSend = async () => {
     if (!input.trim()) return;
     const text = input.trim();
@@ -173,6 +176,11 @@ export default function ChefOrderDetailScreen() {
         sender_id: user.id,
         message: text,
       });
+      fetch(`${API_URL}/api/chat/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: id, message: text, senderId: user.id }),
+      }).catch(() => {});
     } catch { /* silent */ }
   };
 

@@ -34,8 +34,8 @@ export default function Activity({ searchQuery, token }) {
 
   const filtered = activities.filter((a) => {
     const matchesSearch = !searchQuery ||
-      a.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.detail.toLowerCase().includes(searchQuery.toLowerCase());
+      (a.action || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.detail || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filter === 'all' || a.type === filter;
     return matchesSearch && matchesFilter;
   });

@@ -9,27 +9,28 @@ export default function Chefs({ searchQuery, token }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
   }, []);
 
-  const loadChefs = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { chefs } = await adminApi.getChefs(token);
-      setChefList(chefs);
-    } catch (err) {
-      showToast(err.message || 'Failed to load chefs', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [token, showToast]);
-
   useEffect(() => {
-    loadChefs();
-  }, [loadChefs]);
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const { chefs } = await adminApi.getChefs(token);
+        if (!cancelled) setChefList(chefs);
+      } catch (err) {
+        if (!cancelled) showToast(err.message || 'Failed to load chefs', 'error');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token, showToast, refreshTrigger]);
 
   const filtered = chefList.filter((c) => {
     const matchesSearch = !searchQuery ||
@@ -151,7 +152,7 @@ export default function Chefs({ searchQuery, token }) {
       <div className="table-card">
         <div className="table-header">
           <h3>Chefs ({filtered.length})</h3>
-          <button className="btn" onClick={loadChefs} style={{ fontSize: 13 }}>↺ Refresh</button>
+          <button className="btn" onClick={() => setRefreshTrigger(prev => prev + 1)} style={{ fontSize: 13 }}>↺ Refresh</button>
         </div>
 
         {loading ? (

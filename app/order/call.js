@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Pressable, Image, Animated, ImageBackground, Platform, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, StyleSheet, Pressable, Image, Linking, Platform, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { Text } from '@/components/ui';
 import { supabase } from '@/services/supabase';
 import { spacing } from '@/theme';
@@ -16,179 +15,115 @@ export default function CallingScreen() {
 
   const [contactName, setContactName] = useState('Restaurant');
   const [contactPhoto, setContactPhoto] = useState(null);
-  const [status, setStatus] = useState('Calling...');
-  const [callTime, setCallTime] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isSpeaker, setIsSpeaker] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState(null);
+  const [status, setStatus] = useState('Connecting...');
+  const [callInitiated, setCallInitiated] = useState(false);
 
-  const pulseAnim = useRef(new Animated.Value(0.3)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  // Fetch restaurant info from the order
   useEffect(() => {
     if (!orderId) return;
     (async () => {
       try {
         const { data: order } = await supabase
           .from('orders')
-          .select('restaurants ( name, image_url )')
+          .select('restaurants ( name, image_url, phone )')
           .eq('id', orderId)
           .single();
         if (order?.restaurants) {
           setContactName(order.restaurants.name);
           setContactPhoto(order.restaurants.image_url);
+          setPhoneNumber(order.restaurants.phone || null);
+
+          if (order.restaurants.phone) {
+            initiateCall(order.restaurants.phone);
+          } else {
+            setStatus('No phone number available');
+          }
         }
       } catch {
-        // fallback to defaults
         setContactName(FALLBACK_CONTACT.name);
         setContactPhoto(FALLBACK_CONTACT.image_url);
+        setStatus('Unable to load contact info');
       }
     })();
   }, [orderId]);
 
-  useEffect(() => {
-    // Fade in
-    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  const initiateCall = async (phone) => {
+    const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    const url = Platform.OS === 'android' ? `tel:${cleaned}` : `telprompt:${cleaned}`;
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      setStatus('Calling...');
+      setCallInitiated(true);
+      await Linking.openURL(url);
+      setStatus('Call ended');
+    } else {
+      Alert.alert('Phone Call', `Call ${phone}`, [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    }
+  };
 
-    // Ring pulse
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.7, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 0.3, duration: 1000, useNativeDriver: true }),
-      ])
-    ).start();
-
-    // Simulate connection phases
-    const t1 = setTimeout(() => setStatus('Ringing...'), 1500);
-    const t2 = setTimeout(() => setStatus('connected'), 3500);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
-
-  useEffect(() => {
-    if (status !== 'connected') return;
-    const i = setInterval(() => setCallTime((t) => t + 1), 1000);
-    return () => clearInterval(i);
-  }, [status]);
-
-  const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const handleCallAgain = () => {
+    if (phoneNumber) {
+      setCallInitiated(false);
+      initiateCall(phoneNumber);
+    }
+  };
 
   const avatarUri = contactPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(contactName)}&background=FF6B35&color=fff&size=200`;
 
   return (
-    <ImageBackground source={{ uri: avatarUri }} style={styles.bg} blurRadius={Platform.OS === 'android' ? 25 : 0}>
-      {/* iOS blur overlay */}
-      {Platform.OS === 'ios' && (
-        <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
-      )}
-
-      {/* Dark overlay for readability */}
-      <View style={[StyleSheet.absoluteFill, styles.darkOverlay]} />
-
-      <Animated.View style={[styles.content, { opacity: fadeAnim, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 30 }]}>
-        {/* Top — status */}
+    <View style={styles.container}>
+      <View style={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 30 }]}>
         <View style={styles.topSection}>
-          {/* Ringing pulse rings */}
           <View style={styles.avatarContainer}>
-            <Animated.View style={[styles.pulseRing, styles.pulseOuter, { opacity: pulseAnim }]} />
-            <Animated.View style={[styles.pulseRing, styles.pulseMiddle, { opacity: pulseAnim }]} />
             <Image source={{ uri: avatarUri }} style={styles.avatar} />
           </View>
-
           <Text style={styles.name}>{contactName}</Text>
-          <Text style={styles.statusText}>
-            {status === 'connected' ? fmt(callTime) : status}
-          </Text>
+          {phoneNumber && <Text style={styles.phoneText}>{phoneNumber}</Text>}
+          <Text style={styles.statusText}>{status}</Text>
         </View>
 
-        {/* Middle — action grid (iPhone style) */}
-        <View style={styles.actionsGrid}>
-          <View style={styles.actionRow}>
-            <Pressable style={styles.actionItem} onPress={() => setIsMuted(!isMuted)}>
-              <View style={[styles.actionCircle, isMuted && styles.actionCircleActive]}>
-                <Ionicons name={isMuted ? 'mic-off' : 'mic'} size={26} color="#FFF" />
-              </View>
-              <Text style={styles.actionLabel}>{isMuted ? 'unmute' : 'mute'}</Text>
+        <View style={styles.actionsCenter}>
+          {!phoneNumber ? (
+            <Text style={styles.errorText}>This restaurant has not set a phone number yet.</Text>
+          ) : callInitiated ? (
+            <Pressable style={styles.callAgainBtn} onPress={handleCallAgain}>
+              <Ionicons name="call" size={24} color="#FFF" />
+              <Text style={styles.callAgainText}>Call Again</Text>
             </Pressable>
-
-            <Pressable style={styles.actionItem} onPress={() => Alert.alert('Keypad', 'Keypad not available during in-app calls')}>
-              <View style={styles.actionCircle}>
-                <Ionicons name="keypad" size={26} color="#FFF" />
-              </View>
-              <Text style={styles.actionLabel}>keypad</Text>
-            </Pressable>
-
-            <Pressable style={styles.actionItem} onPress={() => setIsSpeaker(!isSpeaker)}>
-              <View style={[styles.actionCircle, isSpeaker && styles.actionCircleActive]}>
-                <Ionicons name={isSpeaker ? 'volume-high' : 'volume-medium'} size={26} color="#FFF" />
-              </View>
-              <Text style={styles.actionLabel}>speaker</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.actionRow}>
-            <Pressable style={styles.actionItem} onPress={() => Alert.alert('Add Call', 'Conference calls not supported')}>
-              <View style={styles.actionCircle}>
-                <Ionicons name="add" size={26} color="#FFF" />
-              </View>
-              <Text style={styles.actionLabel}>add call</Text>
-            </Pressable>
-
-            <Pressable style={styles.actionItem} onPress={() => Alert.alert('Video', 'Video calls coming soon')}>
-              <View style={styles.actionCircle}>
-                <Ionicons name="videocam" size={26} color="#FFF" />
-              </View>
-              <Text style={styles.actionLabel}>FaceTime</Text>
-            </Pressable>
-
-            <Pressable style={styles.actionItem} onPress={() => Alert.alert('Contacts', 'Not available during calls')}>
-              <View style={styles.actionCircle}>
-                <Ionicons name="person" size={26} color="#FFF" />
-              </View>
-              <Text style={styles.actionLabel}>contacts</Text>
-            </Pressable>
-          </View>
+          ) : null}
         </View>
 
-        {/* Bottom — end call */}
         <Pressable style={styles.endBtn} onPress={() => router.back()}>
-          <Ionicons name="call" size={32} color="#FFF" style={{ transform: [{ rotate: '135deg' }] }} />
+          <Ionicons name="close" size={28} color="#FFF" />
         </Pressable>
-      </Animated.View>
-    </ImageBackground>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1 },
-  darkOverlay: { backgroundColor: 'rgba(0,0,0,0.45)' },
+  container: { flex: 1, backgroundColor: '#1A1D26' },
   content: {
     flex: 1, justifyContent: 'space-between', alignItems: 'center',
   },
-
-  // Top
-  topSection: { alignItems: 'center', gap: 8 },
+  topSection: { alignItems: 'center', gap: 8, marginTop: 40 },
   avatarContainer: { width: 120, height: 120, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  pulseRing: { position: 'absolute', borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  pulseOuter: { width: 120, height: 120 },
-  pulseMiddle: { width: 100, height: 100 },
-  avatar: { width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)' },
-  name: { color: '#FFF', fontSize: 28, fontWeight: '300', letterSpacing: 0.5 },
-  statusText: { color: 'rgba(255,255,255,0.6)', fontSize: 15, fontWeight: '400' },
-
-  // Actions grid (2x3 like iPhone)
-  actionsGrid: { gap: 28 },
-  actionRow: { flexDirection: 'row', justifyContent: 'center', gap: 44 },
-  actionItem: { alignItems: 'center', gap: 6, width: 70 },
-  actionCircle: {
-    width: 64, height: 64, borderRadius: 32,
-    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
+  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: 'rgba(255,255,255,0.3)' },
+  name: { color: '#FFF', fontSize: 28, fontWeight: '600', letterSpacing: 0.5 },
+  phoneText: { color: 'rgba(255,255,255,0.5)', fontSize: 16, fontWeight: '400' },
+  statusText: { color: 'rgba(255,255,255,0.6)', fontSize: 15, fontWeight: '400', marginTop: 4 },
+  errorText: { color: 'rgba(255,255,255,0.5)', fontSize: 14, textAlign: 'center', paddingHorizontal: 40 },
+  actionsCenter: { alignItems: 'center' },
+  callAgainBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 12, paddingHorizontal: 24,
+    borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.15)',
   },
-  actionCircleActive: { backgroundColor: 'rgba(255,255,255,0.45)' },
-  actionLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '400' },
-
-  // End
+  callAgainText: { color: '#FFF', fontSize: 16, fontWeight: '500' },
   endBtn: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: '#FF3B30',
+    width: 64, height: 64, borderRadius: 32, backgroundColor: '#FF3B30',
     alignItems: 'center', justifyContent: 'center',
   },
 });

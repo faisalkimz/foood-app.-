@@ -18,19 +18,23 @@ export default function Orders({ searchQuery, token }) {
   const [filter, setFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const loadOrders = async () => {
-    try {
-      const res = await adminApi.getOrders(token);
-      setOrders(res.orders || []);
-    } catch (err) {
-      console.error('Load orders error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadOrders(); }, [token]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await adminApi.getOrders(token);
+        if (!cancelled) setOrders(res.orders || []);
+      } catch (err) {
+        if (!cancelled) console.error('Load orders error:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token, refreshTrigger]);
 
   const filtered = orders.filter((o) => {
     const matchesSearch = !searchQuery ||
@@ -90,7 +94,7 @@ export default function Orders({ searchQuery, token }) {
     <div>
       {/* Status stat cards */}
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)', marginBottom: 16 }}>
-        {Object.entries(STATUS_LABELS).filter(([k]) => k !== 'ready').map(([key, label]) => {
+        {Object.entries(STATUS_LABELS).map(([key, label]) => {
           const colors = { new: '#EFF6FF', preparing: '#FFFBEB', on_the_way: '#F5F3FF', delivered: '#F0FDF4', cancelled: '#FEF2F2' };
           const iconMap = { new: Icons.box(18), preparing: Icons.chef(18), on_the_way: Icons.truck(18), delivered: Icons.check(18), cancelled: Icons.x(18) };
           const colorMap = { new: 'var(--info)', preparing: 'var(--warning)', on_the_way: 'var(--purple)', delivered: 'var(--success)', cancelled: 'var(--danger)' };
@@ -119,7 +123,7 @@ export default function Orders({ searchQuery, token }) {
       <div className="table-card">
         <div className="table-header">
           <h3>Orders ({filtered.length})</h3>
-          <button className="btn btn-sm" onClick={loadOrders} style={{ fontSize: 12 }}>↻ Refresh</button>
+          <button className="btn btn-sm" onClick={() => setRefreshTrigger(prev => prev + 1)} style={{ fontSize: 12 }}>↻ Refresh</button>
         </div>
         <table>
           <thead>

@@ -55,7 +55,7 @@ export default function Sidebar({ currentPage, onNavigate, admin, onLogout }) {
           </div>
         </div>
         <button className="create-order-btn" onClick={() => onNavigate('orders')}>
-          + Create an Order
+          + Orders
         </button>
         <button className="logout-btn" onClick={() => onLogout()}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

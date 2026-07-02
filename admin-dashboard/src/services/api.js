@@ -8,8 +8,8 @@ async function request(endpoint, options = {}, token = null) {
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${BASE_URL}${endpoint}`, {
-    headers,
     ...options,
+    headers,
   });
 
   const data = await res.json();

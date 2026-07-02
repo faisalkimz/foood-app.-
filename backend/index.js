@@ -395,6 +395,18 @@ app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
       .eq('id', id);
 
     if (error) throw error;
+
+    // Send push notification for the status change
+    const { data: orderForPush } = await supabaseAdmin
+      .from('orders')
+      .select('customer_id')
+      .eq('id', id)
+      .single();
+
+    if (orderForPush?.customer_id) {
+      sendOrderStatusPush(id, orderForPush.customer_id, status);
+    }
+
     res.json({ message: `Order updated to ${status}` });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -735,6 +747,126 @@ app.get('/api/payment/verify/:txRef', async (req, res) => {
   }
 });
 
+// ─── Push Notification Helpers ────────────────────────────────────────────────
+async function sendPushNotification(expoPushToken, title, body, data = {}) {
+  if (!expoPushToken || !expoPushToken.startsWith('ExponentPushToken')) {
+    console.log('Invalid or missing push token, skipping notification');
+    return;
+  }
+  try {
+    const res = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: expoPushToken,
+        title,
+        body,
+        data,
+        sound: 'default',
+        priority: 'high',
+      }),
+    });
+    const result = await res.json();
+    if (!res.ok) console.error('Push notification error:', result);
+    return result;
+  } catch (err) {
+    console.error('Failed to send push notification:', err.message);
+  }
+}
+
+async function sendOrderStatusPush(orderId, customerId, status) {
+  const statusMessages = {
+    pending: { title: 'Order Placed', body: 'Your order has been received!' },
+    accepted: { title: 'Order Confirmed', body: 'The restaurant has accepted your order.' },
+    confirmed: { title: 'Order Confirmed', body: 'Your order has been confirmed.' },
+    preparing: { title: 'Preparing', body: 'Your food is being prepared!' },
+    ready: { title: 'Ready for Pickup', body: 'Your order is ready!' },
+    delivering: { title: 'On the Way', body: 'Your order is on the way!' },
+    delivered: { title: 'Delivered', body: 'Your order has been delivered. Enjoy!' },
+    cancelled: { title: 'Order Cancelled', body: 'Your order has been cancelled.' },
+  };
+  const msg = statusMessages[status] || { title: 'Order Update', body: `Status changed to ${status}` };
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('push_token')
+    .eq('id', customerId)
+    .single();
+
+  if (profile?.push_token) {
+    await sendPushNotification(profile.push_token, msg.title, msg.body, { orderId, type: 'order_status' });
+  }
+}
+
+/**
+ * POST /api/chat/send
+ * Sends a chat message and triggers push notification to the recipient.
+ * Body: { orderId, message, senderId }
+ */
+app.post('/api/chat/send', async (req, res) => {
+  const { orderId, message, senderId } = req.body;
+
+  if (!orderId || !message || !senderId) {
+    return res.status(400).json({ error: 'orderId, message, and senderId are required' });
+  }
+
+  try {
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select('customer_id, restaurants ( chef_id )')
+      .eq('id', orderId)
+      .single();
+
+    if (orderError || !order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const chefId = order.restaurants?.chef_id;
+
+    // Insert the message
+    const { error: insertError } = await supabaseAdmin
+      .from('chat_messages')
+      .insert({
+        order_id: orderId,
+        sender_id: senderId,
+        message,
+      });
+
+    if (insertError) throw insertError;
+
+    // Determine recipient and send push notification
+    const recipientId = senderId === order.customer_id ? chefId : order.customer_id;
+    if (recipientId) {
+      const { data: recipientProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('push_token, full_name')
+        .eq('id', recipientId)
+        .single();
+
+      const { data: senderProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('full_name')
+        .eq('id', senderId)
+        .single();
+
+      if (recipientProfile?.push_token) {
+        const senderName = senderProfile?.full_name || 'Someone';
+        await sendPushNotification(
+          recipientProfile.push_token,
+          `New message from ${senderName}`,
+          message,
+          { orderId, type: 'chat' }
+        );
+      }
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Chat send error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Card Validation Helpers ───────────────────────────────────────────────────
 function validateCardNumber(cardNumber) {
   const clean = cardNumber.replace(/\s/g, '');
@@ -770,6 +902,32 @@ function getCardNetwork(cardNumber) {
   if (clean.startsWith('3')) return 'Amex';
   return null;
 }
+
+/**
+ * POST /api/notifications/register
+ * Registers (or updates) a user's Expo push token.
+ * Body: { userId, pushToken }
+ */
+app.post('/api/notifications/register', async (req, res) => {
+  const { userId, pushToken } = req.body;
+
+  if (!userId || !pushToken) {
+    return res.status(400).json({ error: 'userId and pushToken are required' });
+  }
+
+  try {
+    const { error } = await supabaseAdmin
+      .from('profiles')
+      .update({ push_token: pushToken })
+      .eq('id', userId);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Push token registration error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ─── Webhook Endpoint for Payment Confirmation ─────────────────────────────────
 app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), async (req, res) => {

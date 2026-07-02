@@ -9,7 +9,7 @@
 -- STEP 1: Restaurants (all owned by you)
 -- ============================================================
 
-INSERT INTO public.restaurants (id, chef_id, name, description, cuisine, rating, delivery_fee, free_delivery, delivery_time, image_url, is_active)
+INSERT INTO public.restaurants (id, chef_id, name, description, cuisine, rating, delivery_fee, free_delivery, delivery_time, image_url, is_active, phone)
 VALUES
   (
     'bbbbbbbb-0001-0001-0001-000000000001',
@@ -17,7 +17,8 @@ VALUES
     'Kampala Kitchen',
     'Authentic Ugandan home cooking. Matooke, posho, groundnut stew — made fresh daily.',
     'Ugandan', 4.8, 3000, false, 25,
-    'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800', true
+    'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800', true,
+    '+256 700 123 456'
   ),
   (
     'bbbbbbbb-0001-0001-0001-000000000002',
@@ -25,7 +26,8 @@ VALUES
     'Rolex Palace',
     'Famous Ugandan street food — rolex, chips, and more. Quick bites done right.',
     'Street Food', 4.5, 2000, false, 15,
-    'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800', true
+    'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800', true,
+    '+256 770 987 654'
   ),
   (
     'bbbbbbbb-0001-0001-0001-000000000003',
@@ -33,7 +35,8 @@ VALUES
     'Nile Grill',
     'Grilled tilapia, nyama choma, and smoked meats from the shores of Lake Victoria.',
     'Grill & BBQ', 4.6, 4000, false, 35,
-    'https://images.unsplash.com/photo-1544025162-d76694265947?w=800', true
+    'https://images.unsplash.com/photo-1544025162-d76694265947?w=800', true,
+    '+256 772 345 678'
   ),
   (
     'bbbbbbbb-0001-0001-0001-000000000004',
@@ -41,7 +44,8 @@ VALUES
     'Boda Bites',
     'Fast delivery, faster food. Burgers, wraps, and snacks for when you''re on the move.',
     'Fast Food', 4.2, 1500, true, 20,
-    'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800', true
+    'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800', true,
+    '+256 701 234 567'
   ),
   (
     'bbbbbbbb-0001-0001-0001-000000000005',
@@ -49,7 +53,8 @@ VALUES
     'Mama''s Pilau House',
     'Rich, spiced pilau rice, biryani, and samosas. Swahili coast flavors in every bite.',
     'Swahili', 4.7, 2500, false, 30,
-    'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800', true
+    'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800', true,
+    '+256 775 678 901'
   )
 ON CONFLICT (id) DO NOTHING;
 

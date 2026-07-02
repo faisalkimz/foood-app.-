@@ -7,27 +7,28 @@ export default function Users({ searchQuery, token }) {
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
   }, []);
 
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { users } = await adminApi.getUsers(token);
-      setUserList(users);
-    } catch (err) {
-      showToast(err.message || 'Failed to load users', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [token, showToast]);
-
   useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const { users } = await adminApi.getUsers(token);
+        if (!cancelled) setUserList(users);
+      } catch (err) {
+        if (!cancelled) showToast(err.message || 'Failed to load users', 'error');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token, showToast, refreshTrigger]);
 
   const filtered = userList.filter((u) => {
     const matchesSearch = !searchQuery ||
@@ -83,7 +84,7 @@ export default function Users({ searchQuery, token }) {
           </button>
         ))}
         <div style={{ flex: 1 }} />
-        <button className="btn" onClick={loadUsers} style={{ fontSize: 13 }}>↺ Refresh</button>
+        <button className="btn" onClick={() => setRefreshTrigger(prev => prev + 1)} style={{ fontSize: 13 }}>↺ Refresh</button>
       </div>
 
       <div className="table-card">

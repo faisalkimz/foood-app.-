@@ -9,6 +9,7 @@ import { Text } from '@/components/ui';
 import { useTheme } from '@/providers/ThemeProvider';
 import { supabase } from '@/services/supabase';
 import { spacing, radius } from '@/theme';
+import Constants from 'expo-constants';
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -97,6 +98,8 @@ export default function ChatScreen() {
     }, 200);
   }, [messages.length]);
 
+  const API_URL = Constants.expoConfig?.extra?.apiUrl || process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+
   const handleSend = async () => {
     if (!input.trim()) return;
     const text = input.trim();
@@ -109,6 +112,11 @@ export default function ChatScreen() {
         sender_id: user.id,
         message: text,
       });
+      fetch(`${API_URL}/api/chat/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, message: text, senderId: user.id }),
+      }).catch(() => {});
     } catch {
       // silent
     }

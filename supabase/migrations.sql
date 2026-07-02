@@ -159,3 +159,9 @@ CREATE POLICY "Public read restaurants" ON public.restaurants
 DROP POLICY IF EXISTS "Chef manages own restaurant" ON public.restaurants;
 CREATE POLICY "Chef manages own restaurant" ON public.restaurants
   FOR ALL USING (chef_id = auth.uid());
+
+-- ============================================================
+-- MIGRATION 6: push_token column on profiles
+-- ============================================================
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS push_token text DEFAULT '';
