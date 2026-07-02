@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, Image, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, Image, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,14 +40,20 @@ export default function ChefProfileScreen() {
 
   const [stats, setStats] = useState(null);
   const [restaurant, setRestaurant] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
+      setIsLoading(true);
       try {
         const [rest, st] = await Promise.all([fetchMyRestaurant(), fetchChefStats()]);
         setRestaurant(rest);
         setStats(st);
-      } catch { /* ignore */ }
+      } catch (err) {
+        console.log('Failed to load chef profile data:', err);
+      } finally {
+        setIsLoading(false);
+      }
     })();
   }, []);
 
@@ -77,6 +83,11 @@ export default function ChefProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: c.background }]}>
+      {isLoading ? (
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={c.primary} />
+        </View>
+      ) : (
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
@@ -134,6 +145,7 @@ export default function ChefProfileScreen() {
           </View>
         ))}
       </ScrollView>
+      )}
     </View>
   );
 }
@@ -141,6 +153,7 @@ export default function ChefProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: spacing.xl, gap: spacing.md },
+  loadingState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
   profileCard: {
     borderRadius: radius.xl, padding: spacing.xl,
     flexDirection: 'row', alignItems: 'center', gap: spacing.lg,

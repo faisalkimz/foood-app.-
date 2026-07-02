@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { View, StyleSheet, Pressable, FlatList, Image, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useState, useCallback } from 'react';
+import { View, StyleSheet, Pressable, FlatList, Image, Alert, ActivityIndicator } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@/components/ui';
+import { Text, showToast } from '@/components/ui';
 import { useTheme } from '@/providers/ThemeProvider';
-import { fetchRestaurants } from '@/services/restaurantService';
+import { fetchFavourites, removeFavourite } from '@/services/favouritesService';
 import { spacing, radius } from '@/theme';
 
 export default function FavouritesScreen() {
@@ -15,21 +15,35 @@ export default function FavouritesScreen() {
   const [favs, setFavs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const all = await fetchRestaurants();
-        // TODO: Replace with a real favourites table. For now show top rated.
-        setFavs(all.slice(0, 4));
-      } catch { /* silent */ }
-      finally { setIsLoading(false); }
-    })();
+  const loadFavs = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchFavourites();
+      setFavs(data);
+    } catch {
+      showToast({ type: 'error', message: 'Failed to load favourites.' });
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const removeFav = (id) => {
-    Alert.alert('Remove Favourite?', 'This restaurant will be removed from your favourites.', [
+  useFocusEffect(useCallback(() => { loadFavs(); }, []));
+
+  const handleRemove = (item) => {
+    Alert.alert('Remove Favourite?', `"${item.name}" will be removed from your favourites.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => setFavs((prev) => prev.filter((r) => r.id !== id)) },
+      {
+        text: 'Remove', style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeFavourite(item.id);
+            setFavs((prev) => prev.filter((r) => r.id !== item.id));
+            showToast({ type: 'success', message: `${item.name} removed from favourites.` });
+          } catch {
+            showToast({ type: 'error', message: 'Failed to remove.' });
+          }
+        },
+      },
     ]);
   };
 
@@ -56,41 +70,42 @@ export default function FavouritesScreen() {
           ))}
         </View>
       ) : (
-      <FlatList
-        data={favs}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingBottom: insets.bottom + spacing.xl, gap: spacing.md }}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="heart-outline" size={56} color={c.textMuted} />
-            <Text variant="body" style={{ color: c.textMuted }}>No favourites yet</Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <Pressable
-            style={[styles.card, { backgroundColor: c.backgroundSecondary }]}
-            onPress={() => router.push(`/restaurant/${item.id}`)}
-          >
-            <Image source={{ uri: item.image }} style={styles.cardImage} />
-            <View style={styles.cardContent}>
-              <Text variant="body" style={[styles.cardName, { color: c.text }]} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <Text variant="caption" numberOfLines={1}>{item.cuisine}</Text>
-              <View style={styles.cardMeta}>
-                <Ionicons name="star" size={12} color="#FFB800" />
-                <Text variant="caption" style={{ fontWeight: '700', color: c.text, fontSize: 12 }}>
-                  {item.rating}
-                </Text>
-                <Text variant="caption"> · {item.deliveryTime} min</Text>
-              </View>
+        <FlatList
+          data={favs}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingBottom: insets.bottom + spacing.xl, gap: spacing.md }}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="heart-outline" size={56} color={c.textMuted} />
+              <Text variant="body" style={{ color: c.textMuted }}>No favourites yet</Text>
+              <Text variant="caption" style={{ color: c.textMuted }}>Tap the heart icon on a restaurant to save it here</Text>
             </View>
-            <Pressable onPress={() => removeFav(item.id)} hitSlop={8} style={styles.heartBtn}>
-              <Ionicons name="heart" size={22} color="#EF4444" />
+          }
+          renderItem={({ item }) => (
+            <Pressable
+              style={[styles.card, { backgroundColor: c.backgroundSecondary }]}
+              onPress={() => router.push(`/restaurant/${item.id}`)}
+            >
+              <Image source={{ uri: item.image }} style={styles.cardImage} />
+              <View style={styles.cardContent}>
+                <Text variant="body" style={[styles.cardName, { color: c.text }]} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <Text variant="caption" numberOfLines={1}>{item.cuisine}</Text>
+                <View style={styles.cardMeta}>
+                  <Ionicons name="star" size={12} color="#FFB800" />
+                  <Text variant="caption" style={{ fontWeight: '700', color: c.text, fontSize: 12 }}>
+                    {item.rating}
+                  </Text>
+                  <Text variant="caption"> · {item.deliveryTime} min</Text>
+                </View>
+              </View>
+              <Pressable onPress={() => handleRemove(item)} hitSlop={8} style={styles.heartBtn}>
+                <Ionicons name="heart" size={22} color="#EF4444" />
+              </Pressable>
             </Pressable>
-          </Pressable>
-        )}
-      />
+          )}
+        />
       )}
     </View>
   );

@@ -22,7 +22,7 @@ export default function Button({
     ghost: { button: { backgroundColor: 'transparent' }, text: { color: c.primary } },
   };
 
-  const v = variantStyles[variant];
+  const v = variantStyles[variant] || variantStyles.primary;
 
   return (
     <Pressable

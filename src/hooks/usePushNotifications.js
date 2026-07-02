@@ -5,7 +5,6 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { supabase } from '@/services/supabase';
 
-// Configure how notifications behave when the app is in foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -21,14 +20,16 @@ export function usePushNotifications(user) {
   const responseListener = useRef();
 
   useEffect(() => {
-    registerForPushNotificationsAsync().then(token => {
-      if (token) {
-        setExpoPushToken(token);
-        if (user?.id) {
-          saveTokenToSupabase(user.id, token);
+    registerForPushNotificationsAsync()
+      .then(token => {
+        if (token) {
+          setExpoPushToken(token);
+          if (user?.id) {
+            saveTokenToSupabase(user.id, token);
+          }
         }
-      }
-    });
+      })
+      .catch(err => console.log('Push notification registration failed:', err));
 
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       setNotification(notification);
@@ -36,7 +37,6 @@ export function usePushNotifications(user) {
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       console.log(response);
-      // Handle deep linking based on the notification data here if needed
     });
 
     return () => {
@@ -86,17 +86,19 @@ async function registerForPushNotificationsAsync() {
       console.log('Failed to get push token for push notification!');
       return;
     }
-    
-    // Project ID is required for EAS Build
+
     const projectId =
       Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
-      
+
+    if (!projectId) {
+      console.log('No EAS project ID found. Push notifications may not work without EAS Build.');
+    }
+
     try {
-      token = (
-        await Notifications.getExpoPushTokenAsync({
-          projectId,
-        })
-      ).data;
+      const pushTokenData = await Notifications.getExpoPushTokenAsync({
+        projectId: projectId || undefined,
+      });
+      token = pushTokenData.data;
     } catch (e) {
       console.log('Error getting push token', e);
     }

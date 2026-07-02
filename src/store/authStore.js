@@ -3,14 +3,13 @@ import { supabase } from '../services/supabase';
 import { getProfile } from '../services/authService';
 
 export const useAuthStore = create((set, get) => ({
-  user: null,        // Supabase user object + profile merged
-  role: null,        // 'customer' | 'chef' | 'admin'
+  user: null,
+  role: null,
   isOnboarded: false,
   isAuthenticated: false,
-  isLoading: true,   // true while restoring session on app start
+  isLoading: true,
   _initialized: false,
 
-  /** Called by _layout.js on app start — restores session from AsyncStorage */
   initialize: async () => {
     if (get()._initialized) return;
     set({ _initialized: true });
@@ -26,18 +25,19 @@ export const useAuthStore = create((set, get) => ({
             isOnboarded: true,
             isLoading: false,
           });
-        } catch {
+        } catch (err) {
+          console.log('Auth: profile fetch failed, using session user:', err?.message);
           set({ user: session.user, isAuthenticated: true, isLoading: false });
         }
       } else {
         set({ isLoading: false });
       }
-    } catch {
+    } catch (err) {
+      console.log('Auth: session restore failed:', err?.message);
       set({ isLoading: false });
     }
   },
 
-  /** Called after OTP is verified */
   login: (user, role = 'customer') =>
     set({ user, role, isAuthenticated: true, isOnboarded: true }),
 

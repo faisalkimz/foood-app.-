@@ -17,27 +17,38 @@ export async function placeOrder({ restaurantId, items, deliveryAddress, notes =
   const total = subtotal + deliveryFee;
 
   // 1. Insert order
+  const addrStr = typeof deliveryAddress === 'string' ? deliveryAddress : 'Address not specified';
+  const addrParts = addrStr.split(' · ');
+  const deliveryAddr = {
+    name: addrParts[0] || '',
+    street: addrParts[1] || '',
+    city: addrParts[2] || '',
+  };
+
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
       customer_id: user.id,
       restaurant_id: restaurantId,
       status: 'pending',
-      delivery_address: deliveryAddress || 'Address not specified',
+      delivery_address: deliveryAddr,
       payment_method: paymentMethod,
       delivery_fee: deliveryFee,
+      subtotal,
       total_amount: total,
-      special_instructions: notes || null,
+      notes: notes || null,
     })
     .select()
     .single();
 
   if (orderError) throw orderError;
 
-  // 2. Insert order items (only columns that exist in the schema)
+  // 2. Insert order items
   const orderItems = items.map((i) => ({
     order_id: order.id,
     menu_item_id: i.id || null,
+    name: i.name || 'Item',
+    image_url: i.image || '',
     unit_price: i.price,
     quantity: i.quantity,
   }));
@@ -89,8 +100,8 @@ export async function fetchMyOrders() {
     itemCount: `${(o.order_items || []).reduce((s, i) => s + i.quantity, 0)} Items`,
     date: formatDate(o.created_at),
     orderId: `#${o.id.slice(-6).toUpperCase()}`,
-    address: o.delivery_address || '',
-    notes: o.special_instructions || '',
+    address: typeof o.delivery_address === 'object' ? [o.delivery_address.name, o.delivery_address.street, o.delivery_address.city].filter(Boolean).join(', ') : (o.delivery_address || ''),
+    notes: o.notes || '',
     createdAt: o.created_at,
   }));
 }
@@ -131,8 +142,8 @@ export async function fetchOrder(orderId) {
     })),
     total: parseFloat(data.total_amount || 0),
     deliveryFee: parseFloat(data.delivery_fee || 0),
-    address: data.delivery_address || '',
-    notes: data.special_instructions || '',
+    address: typeof data.delivery_address === 'object' ? [data.delivery_address.name, data.delivery_address.street, data.delivery_address.city].filter(Boolean).join(', ') : (data.delivery_address || ''),
+    notes: data.notes || '',
     createdAt: data.created_at,
   };
 }
@@ -141,10 +152,14 @@ export async function fetchOrder(orderId) {
  * Cancel an order.
  */
 export async function cancelOrder(orderId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
   const { error } = await supabase
     .from('orders')
     .update({ status: 'cancelled' })
-    .eq('id', orderId);
+    .eq('id', orderId)
+    .eq('customer_id', user.id);
   if (error) throw error;
 }
 

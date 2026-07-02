@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import {
   View, StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, Pressable, Alert,
+  ScrollView, Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, Input } from '@/components/ui';
+import { Text, Input, showToast } from '@/components/ui';
 import { spacing, radius } from '@/theme';
 import { useTheme } from '@/providers/ThemeProvider';
 import { signInWithOTP } from '@/services/authService';
@@ -20,10 +20,10 @@ export default function ForgotPasswordScreen() {
 
   const handleSend = async () => {
     const trimmed = email.trim().toLowerCase();
-    if (!trimmed) return Alert.alert('Error', 'Please enter your email address.');
+    if (!trimmed) return showToast({ type: 'error', message: 'Please enter your email address.' });
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmed)) return Alert.alert('Error', 'Please enter a valid email address.');
+    if (!emailRegex.test(trimmed)) return showToast({ type: 'error', message: 'Please enter a valid email address.' });
 
     setLoading(true);
     try {
@@ -33,7 +33,7 @@ export default function ForgotPasswordScreen() {
         params: { email: trimmed, mode: 'forgot' },
       });
     } catch (err) {
-      Alert.alert('Error', err.message || 'Failed to send code. Please try again.');
+      showToast({ type: 'error', message: err.message || 'Failed to send code. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -49,7 +49,7 @@ export default function ForgotPasswordScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={c.textInverse} />
         </Pressable>
-        <Text variant="h1" style={[styles.heading, { color: c.textInverse }]}>Sign In</Text>
+        <Text variant="h1" style={[styles.heading, { color: c.textInverse }]}>Forgot Password</Text>
         <Text variant="bodySmall" style={styles.subtitle}>
           Enter your email and we'll send you a sign-in code
         </Text>

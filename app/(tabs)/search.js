@@ -29,8 +29,11 @@ export default function SearchScreen() {
       try {
         const data = await fetchRestaurants();
         setRestaurants(data);
-      } catch { /* silent */ }
-      finally { setIsLoadingData(false); }
+      } catch (err) {
+        console.error('Failed to load restaurants for search:', err);
+        // Set empty array on failure to prevent crashes
+        setRestaurants([]);
+      } finally { setIsLoadingData(false); }
     })();
   }, []);
 
@@ -68,14 +71,14 @@ export default function SearchScreen() {
     if (query) {
       results = results.filter(
         (r) =>
-          r.name.toLowerCase().includes(query.toLowerCase()) ||
-          r.cuisine.toLowerCase().includes(query.toLowerCase())
+          (r.name || '').toLowerCase().includes(query.toLowerCase()) ||
+          (r.cuisine || '').toLowerCase().includes(query.toLowerCase())
       );
     }
 
     if (selectedCategories.length > 0) {
       results = results.filter((r) =>
-        selectedCategories.some((cat) => r.cuisine.toLowerCase().includes(cat.toLowerCase()))
+        selectedCategories.some((cat) => (r.cuisine || '').toLowerCase().includes(cat.toLowerCase()))
       );
     }
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { adminApi } from '../services/api';
 import { Icons } from '../components/Icons';
 
-const STATUS_LABELS = { new: 'New', preparing: 'Preparing', on_the_way: 'On the Way', delivered: 'Delivered', cancelled: 'Cancelled' };
+const STATUS_LABELS = { new: 'New', preparing: 'Preparing', ready: 'Ready', on_the_way: 'On the Way', delivered: 'Delivered', cancelled: 'Cancelled' };
 
 export default function Dashboard({ token }) {
   const [stats, setStats] = useState(null);

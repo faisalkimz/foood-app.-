@@ -4,9 +4,11 @@ import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
 import Flutterwave from 'flutterwave-node-v3';
+import rateLimit from 'express-rate-limit';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // ─── Supabase Admin Client (Service Role — bypasses RLS) ─────────────────────
 const supabaseAdmin = createClient(
@@ -21,12 +23,68 @@ const flw = new Flutterwave(
   process.env.FLW_SECRET_KEY || ''
 );
 
-// ─── Middleware ───────────────────────────────────────────────────────────────
+// ─── Request Logging Middleware ───────────────────────────────────────────────
+app.use((req, res, next) => {
+  const start = Date.now();
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+  });
+  
+  next();
+});
+
+// ─── CORS Configuration ───────────────────────────────────────────────────────
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : (NODE_ENV === 'production' 
+      ? ['https://yourapp.com', 'https://admin.yourapp.com'] 
+      : ['http://localhost:19006', 'http://localhost:3000', 'exp://192.168.*.*:19000']);
+
 app.use(cors({
-  // Allow any origin in development — the phone needs to reach the backend over local WiFi
-  origin: true,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.some(allowed => {
+      // Support wildcard patterns
+      if (allowed.includes('*')) {
+        const pattern = allowed.replace(/\*/g, '.*');
+        return new RegExp(pattern).test(origin);
+      }
+      return origin === allowed;
+    })) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// ─── Rate Limiting ───────────────────────────────────────────────────────────
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: NODE_ENV === 'production' ? 100 : 1000, // Limit each IP to 100 requests per 15 minutes in production
+  message: { error: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/', limiter);
+
+// Stricter rate limiting for payment endpoints
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 payment requests per 15 minutes
+  message: { error: 'Too many payment attempts, please try again later.' },
+});
+
 app.use(express.json());
 
 // ─── JWT Auth Middleware ──────────────────────────────────────────────────────
@@ -38,6 +96,9 @@ function requireAdmin(req, res, next) {
   try {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Insufficient permissions.' });
+    }
     req.admin = decoded;
     next();
   } catch {
@@ -503,7 +564,7 @@ function formatDateTime(iso) {
  * Initiates MTN or Airtel Uganda mobile money payment via Flutterwave REST API
  * Body: { phone, network, amount, email, orderId, customerName }
  */
-app.post('/api/payment/mobile-money', async (req, res) => {
+app.post('/api/payment/mobile-money', paymentLimiter, async (req, res) => {
   const { phone, network, amount, email, orderId, customerName } = req.body;
 
   if (!phone || !network || !amount || !email || !orderId) {
@@ -573,13 +634,38 @@ app.post('/api/payment/mobile-money', async (req, res) => {
 /**
  * POST /api/payment/card
  * Uses Flutterwave Standard (hosted checkout page) — no enckey needed.
- * Body: { amount, email, orderId, customerName }
+ * Body: { amount, email, orderId, customerName, cardNumber, expiry, cvc } (optional for hosted checkout)
  */
-app.post('/api/payment/card', async (req, res) => {
-  const { amount, email, orderId, customerName } = req.body;
+app.post('/api/payment/card', paymentLimiter, async (req, res) => {
+  const { amount, email, orderId, customerName, cardNumber, expiry, cvc } = req.body;
 
   if (!amount || !email || !orderId) {
     return res.status(400).json({ error: 'amount, email, orderId are required' });
+  }
+
+  // Server-side card validation if provided
+  if (cardNumber) {
+    if (!validateCardNumber(cardNumber)) {
+      return res.status(400).json({ error: 'Invalid card number' });
+    }
+    if (expiry && !validateExpiry(expiry)) {
+      return res.status(400).json({ error: 'Invalid expiry date' });
+    }
+    if (cvc && (cvc.length < 3 || cvc.length > 4)) {
+      return res.status(400).json({ error: 'Invalid CVC' });
+    }
+  }
+
+  // Validate amount
+  const parsedAmount = parseFloat(amount);
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
+
+  // Validate email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email address' });
   }
 
   const txRef = `FOOD-CARD-${orderId.slice(-8).toUpperCase()}-${Date.now()}`;
@@ -594,9 +680,9 @@ app.post('/api/payment/card', async (req, res) => {
       },
       body: JSON.stringify({
         tx_ref: txRef,
-        amount: parseFloat(amount),
+        amount: parsedAmount,
         currency: 'UGX',
-        redirect_url: `${process.env.APP_BASE_URL || `http://172.16.4.85:3001`}/api/payment/callback`,
+        redirect_url: `${process.env.APP_BASE_URL || `http://localhost:${PORT}`}/api/payment/callback`,
         customer: { email, name: customerName || 'Customer' },
         customizations: {
           title: 'FoodOrder',
@@ -649,8 +735,107 @@ app.get('/api/payment/verify/:txRef', async (req, res) => {
   }
 });
 
+// ─── Card Validation Helpers ───────────────────────────────────────────────────
+function validateCardNumber(cardNumber) {
+  const clean = cardNumber.replace(/\s/g, '');
+  if (!/^\d{13,19}$/.test(clean)) return false;
+  
+  // Luhn algorithm
+  let sum = 0;
+  let alternate = false;
+  for (let i = clean.length - 1; i >= 0; i--) {
+    let n = parseInt(clean[i], 10);
+    if (alternate) { n *= 2; if (n > 9) n -= 9; }
+    sum += n;
+    alternate = !alternate;
+  }
+  return sum % 10 === 0;
+}
+
+function validateExpiry(expiry) {
+  const match = expiry.match(/^(\d{2})\/(\d{2})$/);
+  if (!match) return false;
+  const month = parseInt(match[1], 10);
+  const year = parseInt(match[2], 10) + 2000;
+  if (month < 1 || month > 12) return false;
+  const now = new Date();
+  const exp = new Date(year, month);
+  return exp > now;
+}
+
+function getCardNetwork(cardNumber) {
+  const clean = cardNumber.replace(/\s/g, '');
+  if (clean.startsWith('4')) return 'Visa';
+  if (clean.startsWith('5') || clean.startsWith('2')) return 'Mastercard';
+  if (clean.startsWith('3')) return 'Amex';
+  return null;
+}
+
+// ─── Webhook Endpoint for Payment Confirmation ─────────────────────────────────
+app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const signature = req.headers['verif-hash'];
+  const secretHash = process.env.FLW_SECRET_HASH;
+
+  // Verify webhook signature
+  if (!secretHash) {
+    console.warn('⚠️ FLW_SECRET_HASH not configured — webhook signature verification is disabled!');
+  } else if (!signature || signature !== secretHash) {
+    console.error('Invalid webhook signature');
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+
+  try {
+    const event = JSON.parse(req.body);
+    console.log('Webhook received:', event);
+
+    if (event.event === 'charge.completed' && event.data.status === 'successful') {
+      const txRef = event.data.tx_ref;
+      
+      // Update order status
+      const { error } = await supabaseAdmin
+        .from('orders')
+        .update({ payment_status: 'paid', status: 'confirmed' })
+        .eq('transaction_id', txRef);
+
+      if (error) {
+        console.error('Failed to update order:', error);
+        return res.status(500).json({ error: 'Failed to process payment' });
+      }
+
+      console.log(`Payment confirmed for order: ${txRef}`);
+      return res.status(200).json({ received: true });
+    }
+
+    res.status(200).json({ received: true });
+  } catch (err) {
+    console.error('Webhook processing error:', err);
+    res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
+
+// ─── 404 and 500 Error Handlers ───────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).json({ 
+    error: 'Endpoint not found',
+    path: req.path,
+    method: req.method 
+  });
+});
+
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ 
+    error: NODE_ENV === 'production' ? 'Internal server error' : err.message,
+    ...(NODE_ENV !== 'production' && { stack: err.stack })
+  });
+});
+
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`\n🚀 FoodOrder Admin API running on http://localhost:${PORT}`);
+  console.log(`   Environment: ${NODE_ENV}`);
+  if (!process.env.FLW_SECRET_HASH) {
+    console.log(`   ⚠️  FLW_SECRET_HASH not set — webhook verification is disabled`);
+  }
   console.log(`   Health: http://localhost:${PORT}/api/health\n`);
 });

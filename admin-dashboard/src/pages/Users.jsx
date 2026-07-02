@@ -26,9 +26,8 @@ export default function Users({ searchQuery, token }) {
   }, [token, showToast]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadUsers();
-  }, []);
+  }, [loadUsers]);
 
   const filtered = userList.filter((u) => {
     const matchesSearch = !searchQuery ||

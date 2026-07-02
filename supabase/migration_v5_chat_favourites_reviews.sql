@@ -13,14 +13,28 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
 
 CREATE INDEX IF NOT EXISTS idx_chat_messages_order ON public.chat_messages(order_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON public.chat_messages(order_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON public.chat_messages(sender_id);
 
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 
--- Customers can read/write messages on their own orders
--- Chefs can read/write messages on their restaurant's orders
-CREATE POLICY "Chat access" ON public.chat_messages
-  FOR ALL USING (
+DROP POLICY IF EXISTS "Chat access" ON public.chat_messages;
+DROP POLICY IF EXISTS "Chat insert" ON public.chat_messages;
+
+CREATE POLICY "Chat select" ON public.chat_messages
+  FOR SELECT USING (
     order_id IN (
+      SELECT id FROM public.orders
+      WHERE customer_id = auth.uid()
+         OR restaurant_id IN (
+           SELECT id FROM public.restaurants WHERE chef_id = auth.uid()
+         )
+    )
+  );
+
+CREATE POLICY "Chat insert" ON public.chat_messages
+  FOR INSERT WITH CHECK (
+    auth.uid() = sender_id
+    AND order_id IN (
       SELECT id FROM public.orders
       WHERE customer_id = auth.uid()
          OR restaurant_id IN (
@@ -42,8 +56,16 @@ CREATE INDEX IF NOT EXISTS idx_favourites_user ON public.favourites(user_id);
 
 ALTER TABLE public.favourites ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users manage own favourites" ON public.favourites
-  FOR ALL USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users manage own favourites" ON public.favourites;
+
+CREATE POLICY "Users read own favourites" ON public.favourites
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users insert own favourites" ON public.favourites
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users delete own favourites" ON public.favourites
+  FOR DELETE USING (auth.uid() = user_id);
 
 -- 3. REVIEWS TABLE
 CREATE TABLE IF NOT EXISTS public.reviews (
@@ -61,6 +83,10 @@ CREATE INDEX IF NOT EXISTS idx_reviews_restaurant ON public.reviews(restaurant_i
 CREATE INDEX IF NOT EXISTS idx_reviews_user ON public.reviews(user_id);
 
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Reviews read public" ON public.reviews;
+DROP POLICY IF EXISTS "Users create own reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Users update own reviews" ON public.reviews;
 
 CREATE POLICY "Reviews read public" ON public.reviews
   FOR SELECT USING (true);

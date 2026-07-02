@@ -201,17 +201,19 @@ export default function PaymentScreen() {
             );
           }
         } catch (payErr) {
+          console.error('Mobile money payment error:', payErr);
           Alert.alert(
             'Payment Issue',
-            `${payErr.message}\n\nWould you like to pay cash on delivery instead?`,
+            `${payErr.message || 'Mobile money payment failed'}\n\nWould you like to pay cash on delivery instead?`,
             [
-              { text: 'Cancel Order', style: 'destructive', onPress: () => router.back() },
+              { text: 'Cancel Order', style: 'destructive', onPress: () => { setIsPlacing(false); router.back(); } },
               {
                 text: 'Pay Cash',
                 onPress: () => { clearCart(); router.replace(`/checkout/congratulations?orderId=${orderId}`); },
               },
             ]
           );
+          return;
         }
         return;
       }
@@ -236,23 +238,25 @@ export default function PaymentScreen() {
             throw new Error('Could not generate payment link');
           }
         } catch (payErr) {
+          console.error('Card payment error:', payErr);
           Alert.alert(
             'Card Payment Issue',
-            `${payErr.message}\n\nPay cash on delivery instead?`,
+            `${payErr.message || 'Card payment failed'}\n\nPay cash on delivery instead?`,
             [
-              { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+              { text: 'Cancel', style: 'cancel', onPress: () => { setIsPlacing(false); router.back(); } },
               {
                 text: 'Pay Cash',
                 onPress: () => { clearCart(); router.replace(`/checkout/congratulations?orderId=${orderId}`); },
               },
             ]
           );
+          return;
         }
         return;
       }
     } catch (err) {
+      console.error('Order placement error:', err);
       showToast({ type: 'error', message: err.message || 'Failed to place order. Please try again.' });
-    } finally {
       setIsPlacing(false);
     }
   };

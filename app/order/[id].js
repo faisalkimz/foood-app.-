@@ -70,8 +70,9 @@ export default function TrackOrderScreen() {
           const orderData = await fetchOrder(id);
           setOrder(orderData);
         }
-      } catch {
-        // order stays null
+      } catch (err) {
+        console.error('Failed to load order:', err);
+        // order stays null, will show error state
       } finally {
         setIsLoading(false);
       }

@@ -41,11 +41,14 @@ export default function FoodDetailScreen() {
           price: parseFloat(data.price),
           image: data.image_url || 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300',
           category: data.category,
+          rating: parseFloat(data.rating) || 0,
+          deliveryFee: parseFloat(data.delivery_fee || 0),
+          deliveryTime: data.delivery_time || 30,
           restaurantId: data.restaurant_id,
           restaurant: data.restaurants?.name || 'Restaurant',
         });
-      } catch {
-        // item stays null
+      } catch (err) {
+        console.error('Failed to load menu item:', err);
       } finally {
         setIsLoading(false);
       }
@@ -125,7 +128,7 @@ export default function FoodDetailScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         {/* Food image */}
         <View style={[styles.imageWrapper, { backgroundColor: c.backgroundSecondary }]}>
-          <Image source={{ uri: item.image }} style={styles.foodImage} />
+          <Image source={{ uri: item.image || 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300' }} style={styles.foodImage} />
           <Pressable style={[styles.heartBtn, { backgroundColor: c.background }]} onPress={() => setIsFav(!isFav)}>
             <Ionicons
               name={isFav ? 'heart' : 'heart-outline'}
@@ -141,11 +144,11 @@ export default function FoodDetailScreen() {
 
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={14} color={c.rating} />
-            <Text variant="body" style={[styles.ratingText, { color: c.text }]}>{item.rating || '4.7'}</Text>
+            <Text variant="body" style={[styles.ratingText, { color: c.text }]}>{item.rating || '-'}</Text>
             <Ionicons name="bicycle-outline" size={14} color={c.primary} style={{ marginLeft: spacing.md }} />
-            <Text variant="bodySmall" style={[styles.ratingText, { color: c.text }]}>Free</Text>
+            <Text variant="bodySmall" style={[styles.ratingText, { color: c.text }]}>{item.deliveryFee === 0 ? 'Free' : formatCurrency(item.deliveryFee)}</Text>
             <Ionicons name="time-outline" size={14} color={c.primary} style={{ marginLeft: spacing.md }} />
-            <Text variant="bodySmall" style={[styles.ratingText, { color: c.text }]}>20 min</Text>
+            <Text variant="bodySmall" style={[styles.ratingText, { color: c.text }]}>{item.deliveryTime || 30} min</Text>
           </View>
 
           <Text variant="label" style={[styles.sizeLabel, { color: c.text }]}>SIZE:</Text>

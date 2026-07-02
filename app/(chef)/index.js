@@ -6,7 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@/components/ui';
+import { Text, showToast } from '@/components/ui';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useAuthStore } from '@/store';
 import { fetchChefStats, fetchMyOrders } from '@/services/restaurantService';
@@ -57,8 +57,15 @@ export default function ChefDashboard() {
       ]);
       setStats(statsData);
       setRecentOrders(ordersData.slice(0, 5));
-    } catch {
-      // Fail silently on dashboard — keep showing what we have
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+      if (!silent) {
+        showToast({ type: 'error', message: 'Failed to load dashboard data. Please check your connection.' });
+      }
+      // Keep showing existing data or set defaults
+      if (!stats) {
+        setStats({ todayOrders: 0, todayRevenue: 0, activeOrders: 0, avgRating: 0 });
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);

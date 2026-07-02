@@ -7,6 +7,51 @@
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
 
 /**
+ * Network error handler with retry logic and timeout
+ */
+async function fetchWithRetry(url, options, retries = 2) {
+  if (!API_BASE) {
+    throw new Error('API URL not configured. Please check your environment settings.');
+  }
+
+  for (let i = 0; i < retries; i++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      const res = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Request failed with status ${res.status}`);
+      }
+      
+      return await res.json();
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      
+      if (i === retries - 1) {
+        // Last retry failed
+        if (error.message.includes('fetch') || error.message.includes('network')) {
+          throw new Error('Network error. Please check your internet connection and try again.');
+        }
+        throw error;
+      }
+      
+      // Wait before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+    }
+  }
+}
+
+/**
  * Initiate MTN or Airtel Uganda Mobile Money payment.
  * Customer receives a prompt on their phone to authorize.
  *
@@ -14,14 +59,11 @@ const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
  * @returns {{ success, message, txRef, flwRef }}
  */
 export async function initMobileMoney({ phone, network, amount, email, orderId, customerName }) {
-  const res = await fetch(`${API_BASE}/api/payment/mobile-money`, {
+  return fetchWithRetry(`${API_BASE}/api/payment/mobile-money`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, network, amount, email, orderId, customerName }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Mobile money payment failed');
-  return data;
 }
 
 /**
@@ -32,14 +74,11 @@ export async function initMobileMoney({ phone, network, amount, email, orderId, 
  * @returns {{ success, paymentLink, txRef }}
  */
 export async function initCardPayment({ amount, email, orderId, customerName }) {
-  const res = await fetch(`${API_BASE}/api/payment/card`, {
+  return fetchWithRetry(`${API_BASE}/api/payment/card`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ amount, email, orderId, customerName }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Card payment failed');
-  return data;
 }
 
 /**
@@ -50,8 +89,5 @@ export async function initCardPayment({ amount, email, orderId, customerName }) 
  * @returns {{ success, status, data }}
  */
 export async function verifyPayment(txRef) {
-  const res = await fetch(`${API_BASE}/api/payment/verify/${encodeURIComponent(txRef)}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Verification failed');
-  return data;
+  return fetchWithRetry(`${API_BASE}/api/payment/verify/${encodeURIComponent(txRef)}`);
 }

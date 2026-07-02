@@ -27,7 +27,7 @@ export default function Text({ variant = 'body', style, children, ...props }) {
   const colorKey = variantColorKeys[variant] || 'text';
 
   return (
-    <RNText style={[variantStyles[variant], { color: c[colorKey] }, style]} {...props}>
+    <RNText style={[variantStyles[variant] || variantStyles.body, { color: c[colorKey] }, style]} {...props}>
       {children}
     </RNText>
   );

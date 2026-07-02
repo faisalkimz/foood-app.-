@@ -39,7 +39,10 @@ export default function RestaurantScreen() {
         .eq('restaurant_id', id)
         .maybeSingle();
       setIsFavourite(!!data);
-    } catch { /* silent */ }
+    } catch (err) {
+      console.error('Failed to check favourite status:', err);
+      // Silent failure - don't show error to user for non-critical feature
+    }
   }, [id]);
 
   const toggleFavourite = useCallback(async () => {
@@ -58,7 +61,8 @@ export default function RestaurantScreen() {
         setIsFavourite(true);
         showToast({ type: 'success', message: 'Added to favourites' });
       }
-    } catch {
+    } catch (err) {
+      console.error('Failed to update favourite:', err);
       showToast({ type: 'error', message: 'Failed to update favourite' });
     }
   }, [id, isFavourite, router]);
@@ -74,7 +78,8 @@ export default function RestaurantScreen() {
         setMenuItems(menu);
         checkFavourite();
       } catch (err) {
-        setError(err.message);
+        console.error('Failed to load restaurant:', err);
+        setError(err.message || 'Failed to load restaurant data');
       } finally {
         setIsLoading(false);
       }
@@ -118,7 +123,7 @@ export default function RestaurantScreen() {
       {/* ── Cover image with nav ── */}
       <View>
         <Image
-          source={{ uri: restaurant.image }}
+          source={{ uri: restaurant.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400' }}
           style={styles.coverImage}
         />
         <View style={[styles.headerOverlay, { paddingTop: insets.top + spacing.sm }]}>

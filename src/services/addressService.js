@@ -131,13 +131,17 @@ export async function selectAddressInDB(id) {
   if (!user) return;
 
   // Deselect all, then select the one
-  await supabase
+  const { error: deselectError } = await supabase
     .from('user_addresses')
     .update({ is_selected: false })
     .eq('user_id', user.id);
 
-  await supabase
+  if (deselectError) throw deselectError;
+
+  const { error: selectError } = await supabase
     .from('user_addresses')
     .update({ is_selected: true })
     .eq('id', id);
+
+  if (selectError) throw selectError;
 }

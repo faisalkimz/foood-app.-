@@ -39,8 +39,11 @@ export default function OrdersScreen() {
     try {
       const data = await fetchMyOrders();
       setAllOrders(data);
-    } catch {
-      // silent
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+      if (!silent) {
+        showToast({ type: 'error', message: 'Failed to load orders. Please check your connection.' });
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);

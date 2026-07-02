@@ -28,9 +28,8 @@ export default function Chefs({ searchQuery, token }) {
   }, [token, showToast]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadChefs();
-  }, []);
+  }, [loadChefs]);
 
   const filtered = chefList.filter((c) => {
     const matchesSearch = !searchQuery ||
